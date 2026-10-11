@@ -41,6 +41,7 @@ public final class WatcherEntity extends Zombie {
     private BlockPos peekSpot;
     private int coverTicks;
     private int routeTimeout;
+    private int moveFailures;
     private int phase; // 0 watch, 1 run for cover, 2 hide, 3 peek, 4 return
 
 
@@ -67,7 +68,8 @@ public final class WatcherEntity extends Zombie {
     }
     public String debugState() {
         return getEncounterKind().name()+" phase="+phase+" age="+lifetime+" ticks"
-           +" route="+routeTimeout+" peek="+isPeeking()+" cover="+coverSpot+" relocations="+relocations+" charging="+charging+" whistled="+whistled+" skinUUID="+entityData.get(TARGET_SKIN);
+           +" route="+routeTimeout+" peek="+isPeeking()+" cover="+coverSpot+" relocations="+relocations+" charging="+charging+" whistled="+whistled+" skinUUID="+entityData.get(TARGET_SKIN)
+           +" path="+(getNavigation().isInProgress()?"moving":"idle")+" moveFailures="+moveFailures;
     }
 
     public boolean isCharging() { return entityData.get(CLIENT_CHARGING); }
@@ -130,7 +132,8 @@ public final class WatcherEntity extends Zombie {
         getLookControl().setLookAt(target, 30f, 30f);
         // setNoAi prevents other AI goals from fighting with our directed movement.
         var delta = target.position().subtract(position());
-        setYRot((float)(Mth.atan2(-delta.x, delta.z) * (180 / Math.PI)));
+        if(phase==0 || phase==2 || phase==6)
+            setYRot((float)(Mth.atan2(-delta.x, delta.z) * (180 / Math.PI)));
 
         if (!whistled && lifetime >= 35 && encounter != EncounterKind.SILENT && encounter != EncounterKind.FALSE_SIGHTING
                 && !(level.getGameRules().getBoolean(WhisperRules.SILENT_ENCOUNTERS)
@@ -196,6 +199,11 @@ public final class WatcherEntity extends Zombie {
         if (phase != 0) {
             routeTimeout++;
             if (routeTimeout > 145) { getNavigation().stop(); phase = 0; coverSpot = null; entityData.set(PEEK_ACTIVE, 0); }
+            else if (phase == 7) { // Follow the player's flank via real pathfinding.
+                if (seen || getNavigation().isDone() || distanceToSqr(target)<100 || routeTimeout>110) {
+                    getNavigation().stop();phase=0;routeTimeout=0;
+                }
+            }
             else if (phase == 5) { // Follow the player's old trail at a discreet distance.
                 if(seen || distanceToSqr(target)<144 || getNavigation().isDone()) {
                     getNavigation().stop(); phase=0; routeTimeout=0;
@@ -231,6 +239,10 @@ public final class WatcherEntity extends Zombie {
             }
             return;
         }
+        // The original watcher had no movement goals and stood still for minutes.
+        // Try actual flank pathfinding at a bounded rate when not in cover or charging.
+        if(lifetime>=45 && (lifetime-45)%60==0 && distanceToSqr(target)>13*13
+            && (!seen || lastSeenTicks>30) && stalkToward(level,target))return;
         if (lastSeenTicks > Mth.clamp(level.getGameRules().getInt(WhisperRules.STARE_SECONDS),2,20)*20 && lifetime > 125) {
             if (level.getGameRules().getBoolean(WhisperRules.LAUGHTER) && level.random.nextInt(3)==0)
                 level.playSound(null,blockPosition(),DeathWhisper.LAUGHTER.get(),SoundSource.HOSTILE,.75f,1f);
@@ -265,6 +277,39 @@ public final class WatcherEntity extends Zombie {
             }
         }
     }
+    /** Move deliberately toward the player's flank, without touching or teleporting. */
+    private boolean stalkToward(ServerLevel level,ServerPlayer target) {
+        int attempts=Mth.clamp(level.getGameRules().getInt(WhisperRules.PATH_BUDGET),2,16);
+        double distance=Math.sqrt(distanceToSqr(target));
+        if(distance<13.0)return false;
+        Vec3 outward=position().subtract(target.position());
+        outward=new Vec3(outward.x,0,outward.z);
+        if(outward.lengthSqr()<.01)return false;
+        outward=outward.normalize();
+        Vec3 tangent=new Vec3(-outward.z,0,outward.x);
+        double desired=Math.max(12.0,Math.min(18.0,distance-6.0));
+        for(int i=0;i<attempts;i++){
+            double sideways=(level.random.nextDouble()-.5)*13;
+            Vec3 goal=target.position().add(outward.scale(desired)).add(tangent.scale(sideways));
+            int x=Mth.floor(goal.x),z=Mth.floor(goal.z),baseY=target.getBlockY();
+            for(int dy=0;dy<=3;dy++){
+                for(int sign:new int[]{1,-1}){
+                    BlockPos spot=new BlockPos(x,baseY+dy*sign,z);
+                    if(!walkable(level,spot))continue;
+                    if(spot.distSqr(target.blockPosition())<11*11)continue;
+                    if(spot.distSqr(blockPosition())<4*4)continue;
+                    var path=getNavigation().createPath(spot,1);
+                    if(path==null || !path.canReach())continue;
+                    if(!getNavigation().moveTo(path,1.18))continue;
+                    phase=7;routeTimeout=0;moveFailures=0;
+                    return true;
+                }
+            }
+        }
+        moveFailures++;
+        return false;
+    }
+
     // Find reachable cover with an opaque block between player and hiding spot,
     // then a nearby peek tile from which the player can be seen.
     private boolean seekCover(ServerLevel level, ServerPlayer target) {
@@ -303,7 +348,8 @@ public final class WatcherEntity extends Zombie {
         return false;
     }
     private boolean walkable(ServerLevel level, BlockPos p) {
-        return level.hasChunkAt(p) && level.getBlockState(p).isAir()
+        return level.hasChunkAt(p) && level.hasChunkAt(p.above()) && level.hasChunkAt(p.below())
+            && level.getBlockState(p).isAir()
             && level.getBlockState(p.above()).isAir()
             && level.getBlockState(p.below()).isSolidRender(level, p.below());
     }
@@ -329,6 +375,7 @@ public final class WatcherEntity extends Zombie {
         tag.putBoolean("PrivateFocus",isPrivateFocus());
         tag.putString("Encounter", encounter.name());
         tag.putInt("PeekCycles",peekCycles);
+        tag.putInt("MoveFailures",moveFailures);
     }
     @Override public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
@@ -345,6 +392,7 @@ public final class WatcherEntity extends Zombie {
             if(parsed!=null)setEncounterKind(parsed);
         }
         peekCycles=tag.getInt("PeekCycles");
+        moveFailures=tag.getInt("MoveFailures");
         // Recalculate paths after a chunk/server reload.
         phase = 0; coverSpot = null; peekSpot = null; entityData.set(PEEK_ACTIVE, 0);
     }
