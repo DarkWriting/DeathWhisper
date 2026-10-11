@@ -66,6 +66,7 @@ public final class WatcherEntity extends Zombie {
            +" route="+routeTimeout+" peek="+isPeeking()+" cover="+coverSpot+" relocations="+relocations;
     }
 
+    public boolean isCharging() { return charging; }
     public int peekSide() { return entityData.get(PEEK_SIDE); }
     public boolean isPeeking() { return entityData.get(PEEK_ACTIVE) != 0; }
     @Override protected void defineSynchedData(SynchedEntityData.Builder builder) {
