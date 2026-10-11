@@ -2,6 +2,7 @@ package com.example.deathwhisper;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
@@ -41,6 +42,26 @@ public final class WhisperCommands {
               ServerPlayer p=EntityArgument.getPlayer(c,"player");
               c.getSource().sendSuccess(()->Component.literal(manager.memory(p)),false);return 1;
           })))
+          .then(Commands.literal("scene").then(Commands.argument("kind", StringArgumentType.word())
+              .executes(c -> {
+                  ServerPlayer p = c.getSource().getPlayerOrException();
+                  EncounterKind kind = EncounterKind.parse(StringArgumentType.getString(c,"kind"));
+                  if(kind==null) {
+                      c.getSource().sendFailure(Component.literal("Invalid scene. Choose: "+java.util.Arrays.toString(EncounterKind.values())));
+                      return 0;
+                  }
+                  return manager.force(p,kind)?1:0;
+              })))
+          .then(Commands.literal("debug").executes(c -> {
+              ServerPlayer p=c.getSource().getPlayerOrException();
+              c.getSource().sendSuccess(() -> Component.literal(manager.diagnostics(p)),false);
+              return 1;
+          }))
+          .then(Commands.literal("memory").executes(c -> {
+              ServerPlayer p=c.getSource().getPlayerOrException();
+              c.getSource().sendSuccess(() -> Component.literal(manager.memory(p)),false);
+              return 1;
+          }))
           .then(Commands.literal("status").executes(c -> {
               ServerPlayer p = c.getSource().getPlayerOrException();
               c.getSource().sendSuccess(() -> Component.literal(manager.status(p)), false);
