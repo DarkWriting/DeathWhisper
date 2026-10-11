@@ -1,6 +1,9 @@
 package com.example.deathwhisper;
 
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.EntityType;
@@ -16,6 +19,13 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 @Mod(DeathWhisper.ID)
 public final class DeathWhisper {
     public static final String ID = "deathwhisper";
+    public static final HorrorPowers POWERS = new HorrorPowers();
+    private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(ID);
+    public static final net.neoforged.neoforge.registries.DeferredItem<ChainPuzzleBox> CHAIN_BOX =
+        ITEMS.registerItem("chain_puzzle_box",ChainPuzzleBox::new,new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<BlightSerum> RUSH_SERUM =
+        ITEMS.registerItem("blight_serum",BlightSerum::new,new Item.Properties().stacksTo(1));
+
     private static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, ID);
     private static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, ID);
     public static final DeferredHolder<EntityType<?>, EntityType<WatcherEntity>> WATCHER = ENTITIES.register("watcher", () ->
@@ -31,6 +41,12 @@ public final class DeathWhisper {
     public static final DeferredHolder<SoundEvent, SoundEvent> LAUGHTER = sound("laughter");
     public static final DeferredHolder<SoundEvent, SoundEvent> AMBIENCE = sound("ambience");
 
+    private void addCreativeItems(BuildCreativeModeTabContentsEvent event) {
+        if(event.getTabKey()==CreativeModeTabs.COMBAT) {
+            event.accept(CHAIN_BOX.get());
+            event.accept(RUSH_SERUM.get());
+        }
+    }
     private void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(WATCHER.get(), Zombie.createAttributes().build());
     }
@@ -39,10 +55,13 @@ public final class DeathWhisper {
         // Force gamerule registration before the vanilla gamerule registry is frozen.
         WhisperRules.ENABLED.toString();
         ENTITIES.register(modBus);
+        ITEMS.register(modBus);
+        modBus.addListener(this::addCreativeItems);
         SOUNDS.register(modBus);
         modBus.addListener(this::registerAttributes);
         StalkingManager manager = new StalkingManager();
         NeoForge.EVENT_BUS.register(manager);
+        NeoForge.EVENT_BUS.register(POWERS);
         NeoForge.EVENT_BUS.register(new WhisperCommands(manager));
     }
 }

@@ -1,1 +1,6 @@
-{"entity.deathwhisper.watcher":"The Watcher","item.deathwhisper.watcher_spawn_egg":"Watcher Spawn Egg"}
+{
+  "entity.deathwhisper.watcher": "The Watcher",
+  "item.deathwhisper.watcher_spawn_egg": "Watcher Spawn Egg",
+  "item.deathwhisper.chain_puzzle_box": "Chain Puzzle Box",
+  "item.deathwhisper.blight_serum": "Blight Serum"
+}

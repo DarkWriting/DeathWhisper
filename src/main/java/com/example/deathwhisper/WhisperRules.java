@@ -57,4 +57,16 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.IntegerValue> GROUP_RADIUS = integer("GroupRadius", 30);
     public static final GameRules.Key<GameRules.IntegerValue> MIN_PATH_DISTANCE = integer("MinPathDistance", 6);
     public static final GameRules.Key<GameRules.IntegerValue> MAX_PATH_DISTANCE = integer("MaxPathDistance", 22);
+
+    public static final GameRules.Key<GameRules.BooleanValue> POWERS_ENABLED = bool("PowersEnabled", true);
+    public static final GameRules.Key<GameRules.BooleanValue> POWERS_PVP = bool("PowersPvp", false);
+    public static final GameRules.Key<GameRules.IntegerValue> CHAINS_RANGE = integer("ChainsRange", 22);
+    public static final GameRules.Key<GameRules.IntegerValue> CHAINS_SECONDS = integer("ChainsSeconds", 4);
+    public static final GameRules.Key<GameRules.IntegerValue> CHAINS_COOLDOWN = integer("ChainsCooldown", 18);
+    public static final GameRules.Key<GameRules.IntegerValue> CHAINS_TARGETS = integer("ChainsTargets", 3);
+    public static final GameRules.Key<GameRules.IntegerValue> RUSH_SPEED = integer("RushSpeed", 115);
+    public static final GameRules.Key<GameRules.IntegerValue> RUSH_CHARGES = integer("RushCharges", 5);
+    public static final GameRules.Key<GameRules.IntegerValue> RUSH_TICKS = integer("RushTicks", 12);
+    public static final GameRules.Key<GameRules.IntegerValue> RUSH_WINDOW = integer("RushWindow", 25);
+
 }
