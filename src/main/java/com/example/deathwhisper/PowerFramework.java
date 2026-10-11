@@ -60,7 +60,9 @@ public final class PowerFramework {
         if(!recast) {
             int ticks=Math.max(1,ability.cooldownTicks(player));
             cooldownEnds.get(abilityId).put(player.getUUID(),now+ticks);
-            player.getCooldowns().addCooldown(item,ticks);
+            player.getCooldowns().addCooldown(item,ability.hasRecastStage()?8:ticks);
+        } else if(expires!=null && expires>now) {
+            player.getCooldowns().addCooldown(item,(int)Math.max(1,expires-now));
         }
         return true;
     }
