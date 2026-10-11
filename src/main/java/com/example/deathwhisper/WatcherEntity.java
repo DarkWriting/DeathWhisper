@@ -19,6 +19,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.ClipContext;
 
 public final class WatcherEntity extends Zombie {
+    private static final EntityDataAccessor<Boolean> PRIVATE_FOCUS=SynchedEntityData.defineId(WatcherEntity.class,EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> PEEK_SIDE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PEEK_STYLE=SynchedEntityData.defineId(WatcherEntity.class,EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PEEK_ACTIVE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
@@ -69,12 +70,15 @@ public final class WatcherEntity extends Zombie {
     }
 
     public boolean isCharging() { return charging; }
+    public void setPrivateFocus(boolean v) {entityData.set(PRIVATE_FOCUS,v);}
+    public boolean isPrivateFocus() {return entityData.get(PRIVATE_FOCUS);}
     public int peekStyle() {return entityData.get(PEEK_STYLE);}
     public int peekSide() { return entityData.get(PEEK_SIDE); }
     public boolean isPeeking() { return entityData.get(PEEK_ACTIVE) != 0; }
     @Override protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(PEEK_SIDE, 1);
+        builder.define(PRIVATE_FOCUS, false);
         builder.define(PEEK_ACTIVE, 0);
         builder.define(PEEK_STYLE, 0);
         builder.define(MOOD, 0);
@@ -295,6 +299,7 @@ public final class WatcherEntity extends Zombie {
         tag.putBoolean("Charging", charging);
         tag.putInt("ChargeTicks", chargeTicks);
         tag.putInt("Phase", phase);
+        tag.putBoolean("PrivateFocus",isPrivateFocus());
         tag.putString("Encounter", encounter.name());
         tag.putInt("PeekCycles",peekCycles);
     }
@@ -306,6 +311,7 @@ public final class WatcherEntity extends Zombie {
         whistled = tag.getBoolean("Whistled");
         charging = tag.getBoolean("Charging");
         chargeTicks = tag.getInt("ChargeTicks");
+        setPrivateFocus(tag.getBoolean("PrivateFocus"));
         if(tag.contains("Encounter")) {
             EncounterKind parsed=EncounterKind.parse(tag.getString("Encounter"));
             if(parsed!=null)setEncounterKind(parsed);
