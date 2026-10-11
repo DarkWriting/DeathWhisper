@@ -48,6 +48,7 @@ public final class GhostPower implements SupernaturalAbility {
     @Override public void serverTick(MinecraftServer server){
         long now=server.overworld().getGameTime();
         marked.entrySet().removeIf(x->x.getValue().until()<=now);
+        // Individual progress is tracked only while the owner holds the shrouded mask.
         Iterator<Map.Entry<UUID,Shroud>> it=active.entrySet().iterator();
         while(it.hasNext()) {
             var entry=it.next();
@@ -80,13 +81,16 @@ public final class GhostPower implements SupernaturalAbility {
     }
     private LivingEntity aimedAt(ServerPlayer p,int range){
         Vec3 eye=p.getEyePosition(),look=p.getLookAngle();
+        Vec3 rayEnd=eye.add(look.scale(range));
         LivingEntity best=null;
         double closest=range*range;
         for(var e:p.serverLevel().getEntitiesOfClass(LivingEntity.class,p.getBoundingBox().inflate(range),
              target->PowerFramework.canAffect(p,target)&&target.distanceToSqr(p)<=range*range)){
-            Vec3 to=e.getEyePosition().subtract(eye);
-            if(to.lengthSqr()<.01 || to.normalize().dot(look)<.965 || !p.hasLineOfSight(e))continue;
-            double distance=to.lengthSqr();
+            // Use the actual target bounding box, not a tight angle to their eye position.
+            // This lets players stalk creatures of different heights and sizes reliably.
+            var intersection=e.getBoundingBox().inflate(.34).clip(eye,rayEnd);
+            if(intersection.isEmpty() || !p.hasLineOfSight(e))continue;
+            double distance=intersection.get().distanceToSqr(eye);
             if(distance<closest){closest=distance;best=e;}
         }
         return best;
