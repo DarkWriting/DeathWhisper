@@ -26,6 +26,7 @@ public final class MirrorSkinCache {
     private static final ResourceLocation FALLBACK=ResourceLocation.fromNamespaceAndPath("deathwhisper","textures/entity/watcher.png");
     private static final Map<String,ResourceLocation> READY=new ConcurrentHashMap<>();
     private static final Map<String,Boolean> PENDING=new ConcurrentHashMap<>();
+    private static final Map<String,Long> RETRY_AFTER=new ConcurrentHashMap<>();
     private static final ExecutorService WORKERS=Executors.newFixedThreadPool(2,task->{
         Thread t=new Thread(task,"deathwhisper-skin");
         t.setDaemon(true);
@@ -42,7 +43,8 @@ public final class MirrorSkinCache {
         String url=skin.textureUrl();
         ResourceLocation ready=READY.get(url);
         if(ready!=null)return ready;
-        if(!PENDING.containsKey(url) && PENDING.size()<32 && READY.size()<128 && trusted(url)) {
+        if(!PENDING.containsKey(url) && PENDING.size()<32 && READY.size()<128 && trusted(url)
+             && System.currentTimeMillis()>=RETRY_AFTER.getOrDefault(url,0L)) {
             if(PENDING.putIfAbsent(url,true)==null) {
                 CompletableFuture.runAsync(()->download(url),WORKERS);
             }
@@ -52,15 +54,18 @@ public final class MirrorSkinCache {
     private static boolean trusted(String url) {
         try {
             URI uri=URI.create(url);
-            return "https".equalsIgnoreCase(uri.getScheme())
+            return ("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))
                 && "textures.minecraft.net".equalsIgnoreCase(uri.getHost())
                 && uri.getRawUserInfo()==null && uri.getPort()==-1
-                && uri.getPath().startsWith("/texture/");
+                && uri.getPath().matches("/texture/[0-9a-fA-F]{32,128}")
+                && uri.getRawQuery()==null && uri.getRawFragment()==null;
         } catch(Exception e){return false;}
     }
     private static void download(String url) {
         try {
-            HttpURLConnection conn=(HttpURLConnection)URI.create(url).toURL().openConnection();
+            // Some Minecraft skin records use HTTP URLs. Fetch the validated Mojang host only over HTTPS.
+            URI original=URI.create(url);
+            HttpURLConnection conn=(HttpURLConnection)URI.create("https://textures.minecraft.net"+original.getRawPath()).toURL().openConnection();
             conn.setConnectTimeout(4500);
             conn.setReadTimeout(6000);
             conn.setInstanceFollowRedirects(false);
@@ -95,6 +100,7 @@ public final class MirrorSkinCache {
             }
         } catch(Exception e) {
             // Offline clients and unavailable public Mojang skins fall back to a built-in distorted test skin.
+            RETRY_AFTER.put(url,System.currentTimeMillis()+300000L);
             PENDING.remove(url);
         }
     }
