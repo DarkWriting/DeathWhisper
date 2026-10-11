@@ -29,9 +29,13 @@ public final class DeathWhisper {
     }
 
     public DeathWhisper(IEventBus modBus) {
+        // Force gamerule registration before the vanilla gamerule registry is frozen.
+        WhisperRules.ENABLED.toString();
         ENTITIES.register(modBus);
         SOUNDS.register(modBus);
         modBus.addListener(this::registerAttributes);
-        NeoForge.EVENT_BUS.register(new StalkingManager());
+        StalkingManager manager = new StalkingManager();
+        NeoForge.EVENT_BUS.register(manager);
+        NeoForge.EVENT_BUS.register(new WhisperCommands(manager));
     }
 }
