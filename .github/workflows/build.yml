@@ -18,12 +18,11 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y ffmpeg
           python3 scripts/generate_assets.py
-          ffmpeg -loglevel error -y -i build/whistle.wav -c:a libvorbis -q:a 4 src/main/resources/assets/deathwhisper/sounds/whistle.ogg
-          ffmpeg -loglevel error -y -i build/whistle.wav -af "asetrate=22050*1.2,aresample=22050" -c:a libvorbis -q:a 4 src/main/resources/assets/deathwhisper/sounds/whistle_alt.ogg
-          ffmpeg -loglevel error -y -i build/whistle.wav -af "asetrate=22050*0.8,aresample=22050" -c:a libvorbis -q:a 4 src/main/resources/assets/deathwhisper/sounds/whistle_low.ogg
-          ffmpeg -loglevel error -y -f lavfi -i "anoisesrc=d=0.25:c=brown:r=22050" -af "volume=0.25" -c:a libvorbis -q:a 4 src/main/resources/assets/deathwhisper/sounds/footsteps.ogg
-          ffmpeg -loglevel error -y -f lavfi -i "sine=frequency=155:duration=1.0:sample_rate=22050" -af "vibrato=f=7:d=0.7,volume=0.25" -c:a libvorbis -q:a 4 src/main/resources/assets/deathwhisper/sounds/laughter.ogg
-          ffmpeg -loglevel error -y -f lavfi -i "anoisesrc=d=3:c=pink:r=22050" -af "lowpass=f=400,volume=0.12" -c:a libvorbis -q:a 4 src/main/resources/assets/deathwhisper/sounds/ambience.ogg
+          mkdir -p src/main/resources/assets/deathwhisper/sounds
+          for f in build/*.wav; do
+            name="$(basename "$f" .wav)"
+            ffmpeg -loglevel error -y -i "$f" -c:a libvorbis -q:a 4 "src/main/resources/assets/deathwhisper/sounds/${name}.ogg"
+          done
       - name: Get Gradle wrapper from NeoForge MDK
         run: |
           git clone --depth 1 https://github.com/NeoForgeMDKs/MDK-1.21.1-ModDevGradle.git /tmp/neoforge-mdk

@@ -1,30 +1,36 @@
 {
   "whistle": {
+    "subtitle": "subtitles.deathwhisper.whistle",
     "sounds": [
       "deathwhisper:whistle"
     ]
   },
   "whistle_alt": {
+    "subtitle": "subtitles.deathwhisper.whistle_alt",
     "sounds": [
       "deathwhisper:whistle_alt"
     ]
   },
   "whistle_low": {
+    "subtitle": "subtitles.deathwhisper.whistle_low",
     "sounds": [
       "deathwhisper:whistle_low"
     ]
   },
   "footsteps": {
+    "subtitle": "subtitles.deathwhisper.footsteps",
     "sounds": [
       "deathwhisper:footsteps"
     ]
   },
   "laughter": {
+    "subtitle": "subtitles.deathwhisper.laughter",
     "sounds": [
       "deathwhisper:laughter"
     ]
   },
   "ambience": {
+    "subtitle": "subtitles.deathwhisper.ambience",
     "sounds": [
       "deathwhisper:ambience"
     ]
