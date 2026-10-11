@@ -1,6 +1,7 @@
 package com.example.deathwhisper;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
@@ -15,6 +16,31 @@ public final class WhisperCommands {
         event.getDispatcher().register(Commands.literal("deathwhisper").requires(s -> s.hasPermission(2))
           .then(Commands.literal("force").executes(c -> spawn(c.getSource().getPlayerOrException()))
             .then(Commands.argument("player", EntityArgument.player()).executes(c -> spawn(EntityArgument.getPlayer(c, "player")))))
+          .then(Commands.literal("scenario")
+            .then(Commands.argument("kind", StringArgumentType.word())
+                .suggests((c,b)->net.minecraft.commands.SharedSuggestionProvider.suggest(
+                    java.util.Arrays.stream(EncounterKind.values()).map(k->k.name().toLowerCase()).toList(),b))
+                .executes(c->spawnKind(c.getSource().getPlayerOrException(),StringArgumentType.getString(c,"kind")))))
+          .then(Commands.literal("scenarioPlayer")
+            .then(Commands.argument("player", EntityArgument.player())
+            .then(Commands.argument("kind", StringArgumentType.word())
+                .suggests((c,b)->net.minecraft.commands.SharedSuggestionProvider.suggest(
+                    java.util.Arrays.stream(EncounterKind.values()).map(k->k.name().toLowerCase()).toList(),b))
+                .executes(c->spawnKind(EntityArgument.getPlayer(c,"player"),StringArgumentType.getString(c,"kind"))))))
+          .then(Commands.literal("debug").executes(c-> {
+              ServerPlayer p=c.getSource().getPlayerOrException();
+              c.getSource().sendSuccess(()->Component.literal(manager.diagnostics(p)),false);return 1;
+          }).then(Commands.argument("player",EntityArgument.player()).executes(c->{
+              ServerPlayer p=EntityArgument.getPlayer(c,"player");
+              c.getSource().sendSuccess(()->Component.literal(manager.diagnostics(p)),false);return 1;
+          })))
+          .then(Commands.literal("memory").executes(c-> {
+              ServerPlayer p=c.getSource().getPlayerOrException();
+              c.getSource().sendSuccess(()->Component.literal(manager.memory(p)),false);return 1;
+          }).then(Commands.argument("player",EntityArgument.player()).executes(c->{
+              ServerPlayer p=EntityArgument.getPlayer(c,"player");
+              c.getSource().sendSuccess(()->Component.literal(manager.memory(p)),false);return 1;
+          })))
           .then(Commands.literal("status").executes(c -> {
               ServerPlayer p = c.getSource().getPlayerOrException();
               c.getSource().sendSuccess(() -> Component.literal(manager.status(p)), false);
@@ -39,6 +65,10 @@ public final class WhisperCommands {
               .then(Commands.argument("amount", IntegerArgumentType.integer(0, 100))
               .executes(c -> { ServerPlayer p = EntityArgument.getPlayer(c, "player"); manager.setThreat(p, IntegerArgumentType.getInteger(c, "amount")); return 1; }))))
         );
+    }
+    private int spawnKind(ServerPlayer p,String kind) {
+        EncounterKind script=EncounterKind.parse(kind);
+        return script!=null && manager.force(p,script)?1:0;
     }
     private int spawn(ServerPlayer player) {
         return manager.force(player) ? 1 : 0;
