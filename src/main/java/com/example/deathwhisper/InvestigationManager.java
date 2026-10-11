@@ -15,6 +15,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.decoration.Painting;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -33,6 +36,7 @@ public final class InvestigationManager {
     private final Map<String,Seance> rituals=new HashMap<>();
     private final Map<UUID,FootTrail> trails=new HashMap<>();
     private final Map<UUID,Long> nextFootstep=new HashMap<>();
+    private final Map<String,GhostHunt> hunts=new LinkedHashMap<>();
     private long ticks=0;
     private static final class Haunting {
         final ResourceKey<Level> dimension;
@@ -59,6 +63,14 @@ public final class InvestigationManager {
         final long expires;
         FootTrail(ResourceKey<Level> dimension,UUID viewer,List<Vec3> positions,long expires){
             this.dimension=dimension;this.viewer=viewer;this.positions=positions;this.expires=expires;
+        }
+    }
+    private static final class GhostHunt {
+        final Haunting site; final Set<UUID> team; final long ends;
+        long nextManifest; int clues; int sightings;
+        GhostHunt(Haunting site,Set<UUID> team,long started,int duration){
+            this.site=site;this.team=team;this.ends=started+duration*20L;
+            this.nextManifest=started+40;
         }
     }
     private static String key(ResourceKey<Level> dimension,BlockPos pos){
@@ -115,6 +127,11 @@ public final class InvestigationManager {
         int before=page.getInt("evidence");
         page.putInt("evidence",before|evidence);
         all.put(k,page);saveCases(p,all);
+        if(evidence!=0){
+            GhostHunt active=hunts.get(k);
+            if(active!=null && active.team.contains(p.getUUID()))
+                active.clues|=evidence;
+        }
         int gained=evidence & ~before;
         if(gained!=0)
             p.sendSystemMessage(Component.literal("§b[Field Journal] New evidence: "+GhostProfile.evidenceText(gained)));
@@ -123,6 +140,177 @@ public final class InvestigationManager {
     private boolean feature(ServerLevel level,net.minecraft.world.level.GameRules.Key<net.minecraft.world.level.GameRules.BooleanValue> k){
         return enabled(level)&&level.getGameRules().getBoolean(k);
     }
+
+    /** Audio tape captures a case-specific ghost response without exposing ghost type. */
+    public boolean recordTape(ServerPlayer p){
+        ServerLevel level=p.serverLevel();
+        if(!feature(level,WhisperRules.CURSED_RECORDINGS))return false;
+        Haunting site=nearby(p,Math.min(32,level.getGameRules().getInt(WhisperRules.INVESTIGATION_RANGE)));
+        if(site==null){
+            p.displayClientMessage(Component.literal("Recorder detects only static. Investigate a painting or ritual first."),true);
+            return false;
+        }
+        String[] statements={"...do not open it...","...the lights are moving...",
+            "...I heard you return...","...it remembers this place...","...look behind the door..."};
+        boolean voice=site.ghost.has(GhostProfile.VOICE);
+        String clip=voice?statements[Math.floorMod(site.focus.hashCode()+site.ghost.ordinal(),statements.length)]
+            :"...krrrr...static...krrrr...";
+        ItemStack tape=new ItemStack(DeathWhisper.CURSED_TAPE.get());
+        CustomData.update(DataComponents.CUSTOM_DATA,tape,tag->{
+            tag.putString("GhostMessage",clip);
+            tag.putString("Dimension",site.dimension.location().toString());
+            tag.putLong("Anchor",site.focus.asLong());
+        });
+        tape.set(DataComponents.CUSTOM_NAME,Component.literal("Cursed Tape - "+site.focus.getX()+", "+site.focus.getZ()));
+        if(!p.getInventory().add(tape))p.drop(tape,false);
+        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.SCULK_SENSOR_CLICKING_STOP,
+           SoundSource.PLAYERS,.5f,.76f);
+        p.sendSystemMessage(Component.literal("§5A recording materializes. Play the tape to hear what was captured."));
+        record(p,site,voice?GhostProfile.VOICE:0);
+        return true;
+    }
+    private boolean equipped(ServerPlayer player){
+        return player.getInventory().items.stream().anyMatch(item->
+            item.is(DeathWhisper.EMF_READER.get()) ||item.is(DeathWhisper.SPIRIT_RADIO.get()) ||
+            item.is(DeathWhisper.GHOST_THERMOMETER.get()) ||item.is(DeathWhisper.UV_LAMP.get()) ||
+            item.is(DeathWhisper.CURSED_RECORDER.get()));
+    }
+    public boolean beginHunt(ServerPlayer caller){
+        ServerLevel level=caller.serverLevel();
+        if(!feature(level,WhisperRules.GHOST_HUNTS_ENABLED))return false;
+        Haunting site=nearby(caller,24);
+        if(site==null){
+            caller.sendSystemMessage(Component.literal("Begin a haunting with ritual chalk or a painting first."));
+            return false;
+        }
+        String id=key(site.dimension,site.focus);
+        if(hunts.containsKey(id)){
+            caller.sendSystemMessage(Component.literal("A ghost hunt is already underway here."));
+            return false;
+        }
+        if(hunts.size()>=4){
+            caller.sendSystemMessage(Component.literal("Too many investigations are active."));
+            return false;
+        }
+        Set<UUID> team=new LinkedHashSet<>();
+        for(ServerPlayer candidate:level.players()){
+            if(candidate.isAlive() && !candidate.isSpectator() &&
+                candidate.distanceToSqr(site.focus.getX()+.5,site.focus.getY()+1,site.focus.getZ()+.5)<18*18
+                && equipped(candidate)) team.add(candidate.getUUID());
+        }
+        int required=Mth.clamp(level.getGameRules().getInt(WhisperRules.HUNT_MIN_PLAYERS),1,4);
+        if(team.size()<required){
+            caller.sendSystemMessage(Component.literal("Need "+required+" nearby investigator(s) carrying EMF, UV, radio, thermometer, or recorder. Found "+team.size()+"."));
+            return false;
+        }
+        int duration=Mth.clamp(level.getGameRules().getInt(WhisperRules.HUNT_SECONDS),20,180);
+        hunts.put(id,new GhostHunt(site,team,ticks,duration));
+        site.lastActive=ticks;
+        for(UUID idPlayer:team){
+            ServerPlayer member=caller.getServer().getPlayerList().getPlayer(idPlayer);
+            if(member!=null)member.sendSystemMessage(Component.literal(
+                "§5[Paranormal Hunt] Ghost activity is escalating. Collect TWO distinct evidence types in "+duration+" seconds!"));
+        }
+        level.playSound(null,site.focus,DeathWhisper.WHISTLE_LOW.get(),SoundSource.AMBIENT,1.5f,.45f);
+        return true;
+    }
+    /** Called by a placed redstone sensor. No terrain or journal mutations except the sensor itself. */
+    public void sensorTriggered(ServerLevel level,BlockPos pos){
+        Haunting closest=null;
+        double distance=20*20;
+        for(Haunting site:sites.values()) {
+            if(site.dimension!=level.dimension())continue;
+            double d=site.focus.distSqr(pos);
+            if(d<distance){closest=site;distance=d;}
+        }
+        if(closest==null)return;
+        for(ServerPlayer player:level.players()){
+            if(player.distanceToSqr(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5)<16*16){
+                player.displayClientMessage(Component.literal("§b[Motion Sensor] Something crossed the detection zone."),true);
+                CompoundTag all=cases(player),page=all.getCompound(key(closest.dimension,closest.focus));
+                page.putInt("motion",page.getInt("motion")+1);
+                all.put(key(closest.dimension,closest.focus),page);
+                saveCases(player,all);
+            }
+        }
+    }
+    public boolean forceManifest(ServerPlayer caller){
+        Haunting site=nearby(caller,25);
+        if(site==null){
+            caller.sendSystemMessage(Component.literal("No active ghost case to manifest."));
+            return false;
+        }
+        return manifest(caller.serverLevel(),site,caller);
+    }
+    private boolean manifest(ServerLevel level,Haunting site,ServerPlayer witness){
+        if(!feature(level,WhisperRules.MANIFESTATIONS_ENABLED) || !witness.isAlive())return false;
+        if(!level.getEntitiesOfClass(GhostApparition.class,new AABB(site.focus).inflate(35)).isEmpty())return false;
+        for(int i=0;i<16;i++){
+            double theta=level.random.nextDouble()*Math.PI*2;
+            int distance=7+level.random.nextInt(10);
+            int x=Mth.floor(witness.getX()+Math.cos(theta)*distance);
+            int z=Mth.floor(witness.getZ()+Math.sin(theta)*distance);
+            for(int dy=-3;dy<=3;dy++){
+                BlockPos at=new BlockPos(x,witness.blockPosition().getY()+dy,z);
+                if(!level.hasChunkAt(at) || !level.getBlockState(at).isAir() ||
+                   !level.getBlockState(at.above()).isAir() ||
+                   !level.getBlockState(at.below()).isSolidRender(level,at.below()))continue;
+                GhostApparition ghost=DeathWhisper.GHOST_APPARITION.get().create(level);
+                if(ghost==null)return false;
+                ghost.moveTo(x+.5,at.getY(),z+.5,0,0);
+                ghost.manifestFor(witness.getUUID(),
+                    20*Mth.clamp(level.getGameRules().getInt(WhisperRules.MANIFEST_SECONDS),4,30));
+                if(!level.addFreshEntity(ghost))return false;
+                level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,x+.5,at.getY()+1,z+.5,18,.5,.6,.5,.02);
+                level.playSound(null,at,DeathWhisper.WHISTLE_LOW.get(),SoundSource.AMBIENT,.85f,.62f);
+                return true;
+            }
+        }
+        return false;
+    }
+    private void tickHunts(MinecraftServer server){
+        Iterator<Map.Entry<String,GhostHunt>> iterator=hunts.entrySet().iterator();
+        while(iterator.hasNext()){
+            GhostHunt hunt=iterator.next().getValue();
+            ServerLevel level=server.getLevel(hunt.site.dimension);
+            if(level==null || !enabled(level) ||
+                !level.getGameRules().getBoolean(WhisperRules.GHOST_HUNTS_ENABLED) ||
+                ticks>hunt.ends || !level.hasChunkAt(hunt.site.focus)){
+                iterator.remove();continue;
+            }
+            hunt.site.lastActive=ticks;
+            hunt.team.removeIf(uuid->{
+                ServerPlayer p=server.getPlayerList().getPlayer(uuid);
+                return p==null ||p.level()!=level || !p.isAlive()||
+                   p.distanceToSqr(hunt.site.focus.getX()+.5,hunt.site.focus.getY()+1,hunt.site.focus.getZ()+.5)>28*28;
+            });
+            if(hunt.team.isEmpty()){iterator.remove();continue;}
+            if(Integer.bitCount(hunt.clues&hunt.site.ghost.evidence)>=2){
+                for(UUID id:hunt.team){
+                    ServerPlayer p=server.getPlayerList().getPlayer(id);
+                    if(p==null)continue;
+                    p.giveExperiencePoints(25);
+                    p.sendSystemMessage(Component.literal("§a[Hunt Complete] Two ghost clues confirmed. Check your field journal and identify the ghost."));
+                }
+                iterator.remove();continue;
+            }
+            if(ticks>=hunt.nextManifest){
+                hunt.nextManifest=ticks+Mth.clamp(level.getGameRules().getInt(WhisperRules.HUNT_ACTIVITY_TICKS),45,240);
+                if(hunt.sightings<3 &&
+                   level.random.nextInt(100)<Mth.clamp(level.getGameRules().getInt(WhisperRules.HUNT_MANIFEST_CHANCE),0,100)){
+                    for(UUID id:hunt.team){
+                        ServerPlayer p=server.getPlayerList().getPlayer(id);
+                        if(p!=null && manifest(level,hunt.site,p)){hunt.sightings++;break;}
+                    }
+                }else {
+                    level.sendParticles(ParticleTypes.SOUL,hunt.site.focus.getX()+.5,hunt.site.focus.getY()+1,
+                        hunt.site.focus.getZ()+.5,12,1,.9,1,.02);
+                    level.playSound(null,hunt.site.focus,SoundEvents.SCULK_SHRIEKER_SHRIEK,SoundSource.AMBIENT,.25f,.6f);
+                }
+            }
+        }
+    }
+
     public boolean showJournal(ServerPlayer p){
         CompoundTag all=cases(p);
         p.sendSystemMessage(Component.literal("§8[§5Investigation Journal§8] §7"+all.getAllKeys().size()+" recorded cases"));
@@ -260,6 +448,8 @@ public final class InvestigationManager {
         Haunting site=create(p.serverLevel(),painting.blockPosition());
         if(site==null)return;
         record(p,site,site.ghost.has(GhostProfile.INK)?GhostProfile.INK:0);
+        if(p.serverLevel().random.nextInt(100)<Mth.clamp(p.serverLevel().getGameRules().getInt(WhisperRules.PAINTING_MANIFEST_CHANCE),0,100))
+            manifest(p.serverLevel(),site,p);
         p.serverLevel().sendParticles(ParticleTypes.SQUID_INK,painting.getX(),painting.getY()+.7,painting.getZ(),12,.3,.45,.3,.02);
         p.serverLevel().sendParticles(ParticleTypes.SOUL,painting.getX(),painting.getY()+.6,painting.getZ(),8,.4,.3,.4,.01);
         p.serverLevel().playSound(null,painting.blockPosition(),SoundEvents.SCULK_SHRIEKER_SHRIEK,
@@ -299,6 +489,11 @@ public final class InvestigationManager {
                         witness.sendSystemMessage(Component.literal("§dA presence has answered the ritual. Your journal has been updated."));
                     }
                     level.playSound(null,at,DeathWhisper.WHISTLE_LOW.get(),SoundSource.AMBIENT,1.3f,.62f);
+                    if(level.random.nextInt(100)<50){
+                        for(UUID member:ritual.members){ServerPlayer p=server.getPlayerList().getPlayer(member);
+                            if(p!=null){manifest(level,ritual.site,p);break;}
+                        }
+                    }
                     level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,at.getX()+.5,at.getY()+1,at.getZ()+.5,35,2,1.3,2,.04);
                     return true;
                 }
@@ -309,7 +504,8 @@ public final class InvestigationManager {
             sites.entrySet().removeIf(e->ticks-e.getValue().lastActive>20L*60*40);
             if(rituals.isEmpty() && sites.isEmpty() && server.getPlayerList().getPlayers().isEmpty())return;
             for(Haunting site:sites.values()){
-                if(!server.getLevel(site.dimension).hasChunkAt(site.focus))continue;
+                ServerLevel hauntedLevel=server.getLevel(site.dimension);
+                if(hauntedLevel==null || !hauntedLevel.hasChunkAt(site.focus))continue;
                 if(ticks%100==0 && server.getLevel(site.dimension).random.nextInt(5)==0){
                     ServerLevel level=server.getLevel(site.dimension);
                     level.sendParticles(ParticleTypes.ASH,site.focus.getX()+.5,site.focus.getY()+1,site.focus.getZ()+.5,
