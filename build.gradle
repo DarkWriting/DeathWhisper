@@ -1,0 +1,23 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.147'
+}
+version = project.mod_version
+group = 'com.example.deathwhisper'
+base { archivesName = 'death-whisper' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+neoForge {
+    version = project.neo_version
+    runs { client { client() }; server { server(); programArgument '--nogui' } }
+    mods { deathwhisper { sourceSet(sourceSets.main) } }
+}
+var generateMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def props = [mod_version: project.mod_version]
+    inputs.properties props
+    expand props
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+sourceSets.main.resources.srcDir generateMetadata
+neoForge.ideSyncTask generateMetadata
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
