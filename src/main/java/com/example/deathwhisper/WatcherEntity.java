@@ -21,7 +21,12 @@ import net.minecraft.world.level.ClipContext;
 public final class WatcherEntity extends Zombie {
     private static final EntityDataAccessor<Integer> PEEK_SIDE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PEEK_ACTIVE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MOOD = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private UUID chosenPlayer;
+    private EncounterKind encounter=EncounterKind.WATCH;
+    private boolean sightingRecorded, chaseRecorded, escaped;
+    private int lastFootsteps, peekCycles, lastWhistle;
+
     private int lifetime;
     private int relocations;
     private boolean whistled;
@@ -46,12 +51,26 @@ public final class WatcherEntity extends Zombie {
     @Override protected void registerGoals() { }
     public void setChosenPlayer(UUID id) { chosenPlayer = id; }
     public UUID getChosenPlayer() { return chosenPlayer; }
+    public void setEncounterKind(EncounterKind kind) {
+        encounter=kind;
+        entityData.set(MOOD, kind.ordinal());
+    }
+    public EncounterKind getEncounterKind() {
+        int id=entityData.get(MOOD);
+        return EncounterKind.values()[Mth.clamp(id,0,EncounterKind.values().length-1)];
+    }
+    public String debugState() {
+        return getEncounterKind().name()+" phase="+phase+" age="+lifetime+" ticks"
+           +" route="+routeTimeout+" peek="+isPeeking()+" cover="+coverSpot+" relocations="+relocations;
+    }
+
     public int peekSide() { return entityData.get(PEEK_SIDE); }
     public boolean isPeeking() { return entityData.get(PEEK_ACTIVE) != 0; }
     @Override protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(PEEK_SIDE, 1);
         builder.define(PEEK_ACTIVE, 0);
+        builder.define(MOOD, 0);
     }
 
     @Override public void tick() {
@@ -72,19 +91,52 @@ public final class WatcherEntity extends Zombie {
         if (target == null || target.level() != level || target.isSpectator()
                 || !level.getGameRules().getBoolean(WhisperRules.ENABLED)) { discard(); return; }
         int maxTicks = Mth.clamp(level.getGameRules().getInt(WhisperRules.DURATION), 5, 180) * 20;
-        if (lifetime > maxTicks || distanceToSqr(target) > 120*120) { discard(); return; }
+        if (encounter==EncounterKind.FALSE_SIGHTING || encounter==EncounterKind.PERIPHERAL) maxTicks=Math.min(maxTicks,110);
+        if (encounter==EncounterKind.FAKE_DEPARTURE) maxTicks+=160;
+        if (lifetime > maxTicks || distanceToSqr(target) > 120*120) {
+            if (!escaped) target.getPersistentData().putInt("deathwhisper_escapes",
+                target.getPersistentData().getInt("deathwhisper_escapes")+1);
+            discard();return;
+        }
         getLookControl().setLookAt(target, 30f, 30f);
         // setNoAi prevents other AI goals from fighting with our directed movement.
         var delta = target.position().subtract(position());
         setYRot((float)(Mth.atan2(-delta.x, delta.z) * (180 / Math.PI)));
 
-        if (!whistled && lifetime >= 35) {
-            whistled = true;
-            level.playSound(null, blockPosition(), DeathWhisper.WHISTLE.get(), SoundSource.HOSTILE, 1.9f, 0.95f);
+        if (!whistled && lifetime >= 35 && encounter != EncounterKind.SILENT && encounter != EncounterKind.FALSE_SIGHTING
+                && !(level.getGameRules().getBoolean(WhisperRules.SILENT_ENCOUNTERS)
+                    && level.random.nextInt(100)<10)) {
+            whistled = true; lastWhistle=lifetime;
+            int variant=level.random.nextInt(3);
+            var sound=variant==0?DeathWhisper.WHISTLE.get():variant==1?DeathWhisper.WHISTLE_ALT.get():DeathWhisper.WHISTLE_LOW.get();
+            level.playSound(null, blockPosition(), sound, SoundSource.HOSTILE,
+                Mth.clamp(level.getGameRules().getInt(WhisperRules.WHISTLE_VOLUME),0,200)/100f*1.9f, .9f+level.random.nextFloat()*.16f);
+            target.getPersistentData().putInt("deathwhisper_whistles",target.getPersistentData().getInt("deathwhisper_whistles")+1);
         }
-        if (distanceToSqr(target) < 49) { discard(); return; }
+        if (level.getGameRules().getBoolean(WhisperRules.AMBIENCE) && lifetime%90==0)
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.ASH,getX(),getY()+1,getZ(),3,.3,.4,.3,.005);
+        if (level.getGameRules().getBoolean(WhisperRules.FOOTSTEPS) && !charging && lifetime>65 && lifetime-lastFootsteps>110
+             && (encounter==EncounterKind.FOOTSTEPS || (phase==1 && level.random.nextInt(100)<25))) {
+            lastFootsteps=lifetime;
+            level.playSound(null,blockPosition(),DeathWhisper.FOOTSTEPS.get(),SoundSource.HOSTILE,.65f,.8f+level.random.nextFloat()*.4f);
+        }
+        if (distanceToSqr(target) < 49) {
+            if(!chaseRecorded) {
+                target.getPersistentData().putInt("deathwhisper_chases",target.getPersistentData().getInt("deathwhisper_chases")+1);
+                chaseRecorded=true;
+            }
+            discard();return;
+        }
         boolean seen = target.hasLineOfSight(this) && playerFacing(target);
         lastSeenTicks = seen ? lastSeenTicks+1 : 0;
+        if(seen && !sightingRecorded && lastSeenTicks>12) {
+            sightingRecorded=true;
+            target.getPersistentData().putInt("deathwhisper_sightings", target.getPersistentData().getInt("deathwhisper_sightings")+1);
+            target.getPersistentData().putInt("deathwhisper_last", (int)(level.getGameTime()%2147483647));
+        }
+        if(seen && lastSeenTicks==50) {
+            target.getPersistentData().putInt("deathwhisper_curiosity",target.getPersistentData().getInt("deathwhisper_curiosity")+1);
+        }
         if (charging) {
             chargeTicks++;
             if (chargeTicks > 35 || distanceToSqr(target) < 80) { discard(); return; }
@@ -104,13 +156,14 @@ public final class WatcherEntity extends Zombie {
             } else if (phase == 2) {
                 getNavigation().stop();
                 entityData.set(PEEK_ACTIVE, 0);
-                if (++coverTicks > 35 && peekSpot != null) {
+                if (++coverTicks > 35 && peekSpot != null
+                        && level.getGameRules().getBoolean(WhisperRules.PEEKING)) {
                     if (getNavigation().moveTo(peekSpot.getX()+0.5, peekSpot.getY(), peekSpot.getZ()+0.5, 0.65)) {
-                        phase = 3; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 1);
+                        phase = 3; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 1); peekCycles++;
                     }
                 }
             } else if (phase == 3) {
-                if (getNavigation().isDone() || routeTimeout > 45) {
+                if (getNavigation().isDone() || routeTimeout > Mth.clamp(level.getGameRules().getInt(WhisperRules.PEEK_SECONDS),1,10)*20) {
                     coverTicks = 0; phase = 4; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 0);
                     if (coverSpot != null) getNavigation().moveTo(coverSpot.getX()+0.5, coverSpot.getY(), coverSpot.getZ()+0.5, 0.85);
                 }
@@ -119,15 +172,23 @@ public final class WatcherEntity extends Zombie {
             }
             return;
         }
-        if (lastSeenTicks > 80 && lifetime > 125) { discard(); return; }
+        if (lastSeenTicks > Mth.clamp(level.getGameRules().getInt(WhisperRules.STARE_SECONDS),2,20)*20 && lifetime > 125) {
+            if (level.getGameRules().getBoolean(WhisperRules.LAUGHTER) && level.random.nextInt(3)==0)
+                level.playSound(null,blockPosition(),DeathWhisper.LAUGHTER.get(),SoundSource.HOSTILE,.75f,1f);
+            discard(); return;
+        }
         if (lifetime > 100 && lifetime % 85 == 0) {
+            int chargeChance=Mth.clamp(level.getGameRules().getInt(WhisperRules.CHARGE_CHANCE),0,100);
+            if(level.getGameRules().getBoolean(WhisperRules.BEHAVIOR_ADAPT))
+                chargeChance=Mth.clamp(chargeChance+target.getPersistentData().getInt("deathwhisper_chases")/4,0,80);
             if (level.getGameRules().getBoolean(WhisperRules.FAKE_CHARGES)
-                 && level.random.nextInt(100) < Mth.clamp(level.getGameRules().getInt(WhisperRules.CHARGE_CHANCE), 0, 100)) {
+                 && level.random.nextInt(100) < chargeChance && encounter!=EncounterKind.FALSE_SIGHTING) {
                 charging = true;
                 level.playSound(null, blockPosition(), DeathWhisper.WHISTLE.get(), SoundSource.HOSTILE, 2.3f, 1.2f);
                 return;
             }
-            if (level.getGameRules().getBoolean(WhisperRules.REPOSITION) && relocations < 3 && !seen) {
+            if (level.getGameRules().getBoolean(WhisperRules.REPOSITION)
+                 && relocations < Mth.clamp(level.getGameRules().getInt(WhisperRules.RELOCATIONS),0,12) && !seen) {
                 if (seekCover(level, target)) {
                     relocations++;
                     whistled = false;
@@ -138,9 +199,15 @@ public final class WatcherEntity extends Zombie {
     // Find reachable cover with an opaque block between player and hiding spot,
     // then a nearby peek tile from which the player can be seen.
     private boolean seekCover(ServerLevel level, ServerPlayer target) {
-        for (int attempt = 0; attempt < 35; attempt++) {
-            int x = blockPosition().getX() + level.random.nextInt(29)-14;
-            int z = blockPosition().getZ() + level.random.nextInt(29)-14;
+        int budget=Mth.clamp(level.getGameRules().getInt(WhisperRules.PATH_BUDGET),1,40);
+        int near=Mth.clamp(level.getGameRules().getInt(WhisperRules.MIN_PATH_DISTANCE),2,20);
+        int far=Mth.clamp(level.getGameRules().getInt(WhisperRules.MAX_PATH_DISTANCE),near+1,35);
+        for (int attempt = 0; attempt < budget; attempt++) {
+            int dx=level.random.nextInt(far*2+1)-far;
+            int dz=level.random.nextInt(far*2+1)-far;
+            if(dx*dx+dz*dz<near*near)continue;
+            int x = blockPosition().getX()+dx;
+            int z = blockPosition().getZ()+dz;
             for (int dy = -3; dy <= 3; dy++) {
                 BlockPos spot = new BlockPos(x, blockPosition().getY()+dy, z);
                 if (!walkable(level, spot) || spot.distSqr(target.blockPosition()) < 140) continue;
@@ -190,6 +257,8 @@ public final class WatcherEntity extends Zombie {
         tag.putBoolean("Charging", charging);
         tag.putInt("ChargeTicks", chargeTicks);
         tag.putInt("Phase", phase);
+        tag.putString("Encounter", encounter.name());
+        tag.putInt("PeekCycles",peekCycles);
     }
     @Override public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
@@ -199,6 +268,11 @@ public final class WatcherEntity extends Zombie {
         whistled = tag.getBoolean("Whistled");
         charging = tag.getBoolean("Charging");
         chargeTicks = tag.getInt("ChargeTicks");
+        if(tag.contains("Encounter")) {
+            EncounterKind parsed=EncounterKind.parse(tag.getString("Encounter"));
+            if(parsed!=null)setEncounterKind(parsed);
+        }
+        peekCycles=tag.getInt("PeekCycles");
         // Recalculate paths after a chunk/server reload.
         phase = 0; coverSpot = null; peekSpot = null; entityData.set(PEEK_ACTIVE, 0);
     }
