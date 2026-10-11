@@ -38,8 +38,8 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.BooleanValue> DEBUG = bool("Debug", false);
     public static final GameRules.Key<GameRules.IntegerValue> COOLDOWN = integer("Cooldown", 900);
     public static final GameRules.Key<GameRules.IntegerValue> CHANCE = integer("Chance", 30);
-    public static final GameRules.Key<GameRules.IntegerValue> MIN_DISTANCE = integer("MinDistance", 20);
-    public static final GameRules.Key<GameRules.IntegerValue> MAX_DISTANCE = integer("MaxDistance", 48);
+    public static final GameRules.Key<GameRules.IntegerValue> MIN_DISTANCE = integer("MinDistance", 14);
+    public static final GameRules.Key<GameRules.IntegerValue> MAX_DISTANCE = integer("MaxDistance", 30);
     public static final GameRules.Key<GameRules.IntegerValue> DURATION = integer("Duration", 45);
     public static final GameRules.Key<GameRules.IntegerValue> CHARGE_CHANCE = integer("ChargeChance", 10);
     public static final GameRules.Key<GameRules.IntegerValue> THREAT_GAIN = integer("ThreatGain", 10);
