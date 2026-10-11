@@ -19,6 +19,19 @@ raw=b"".join(bytes([0])+b"".join(bytes(p) for p in row) for row in pixels)
 def chunk(name,data):
     return struct.pack(">I",len(data))+name+data+struct.pack(">I",zlib.crc32(name+data)&0xFFFFFFFF)
 tex.write_bytes(bytes([137,80,78,71,13,10,26,10])+chunk(b"IHDR",struct.pack(">IIBBBBB",64,64,8,6,0,0,0))+chunk(b"IDAT",zlib.compress(raw,9))+chunk(b"IEND",b""))
+# Glowing red eyes mapped to the standard player's face (UV x=8..15, y=8..15).
+# Transparent elsewhere, so the inverted target skin remains fully visible.
+eye_rows=[]
+for eye_y in range(64):
+    eye_row=[]
+    for eye_x in range(64):
+        is_eye=(eye_x in (10,13)) and (eye_y in (11,12))
+        eye_row.append((255,18,27,255) if is_eye else (0,0,0,0))
+    eye_rows.append(eye_row)
+eye_raw=b"".join(bytes([0])+b"".join(bytes(p) for p in row) for row in eye_rows)
+eye_file=root/"textures/entity/watcher_eyes.png"
+eye_file.write_bytes(bytes([137,80,78,71,13,10,26,10])+chunk(b"IHDR",struct.pack(">IIBBBBB",64,64,8,6,0,0,0))+chunk(b"IDAT",zlib.compress(eye_raw,9))+chunk(b"IEND",b""))
+
 pathlib.Path("build").mkdir(exist_ok=True)
 rate=22050
 sounds={
