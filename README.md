@@ -187,3 +187,58 @@ Each of the six original ghost profiles has a unique two-evidence combination. A
 For accelerated testing, set FootprintInterval 30 and FootprintChance 100, then stand in survival mode.
 
 **Important limitations:** No full ghost NPC/3D apparition, live voice recognition, UV scanner, client evidence GUI, or actual painting-art transformations in this first version. Haunted paintings show effects rather than changing pictures. Investigation events do not intentionally modify blocks or teleport anyone, making them safer to try on servers using claims mods. Compile success is not proof of correct in-game behavior.
+
+## Paranormal hunts v0.8.0 — experimental
+
+This update adds **physical spectral apparitions**, **a redstone motion-sensor block**, **cursed tapes with item-embedded recordings**, and **equipment-based cooperative ghost hunts**. All haunted scenarios use loaded chunks only, are non-lethal, and leave the existing world unchanged except for sensor blocks that players explicitly place.
+
+### Test items
+Use an OP account for the following commands. Join in survival mode for a normal investigation:
+
+```mcfunction
+/give @s deathwhisper:motion_sensor
+/give @s deathwhisper:cursed_recorder
+/give @s deathwhisper:cursed_tape
+/give @s deathwhisper:ghost_hunt_kit
+/give @s deathwhisper:emf_reader
+/give @s deathwhisper:spirit_radio
+/give @s deathwhisper:ghost_thermometer
+/give @s deathwhisper:uv_lamp
+```
+
+1. **Start a case**: sneak-right-click a placed vanilla painting or have two players use ritual chalk on the same floor block. Every active haunting has a stable ghost type based on seed and position.
+2. **Set up equipment**: place `motion_sensor` near the painting/ritual area. It detects live apparitions within 6 blocks, plays an alert, and briefly emits redstone power (level 15). It ignores other players by default; enable `deathWhisperMotionSensorPlayers` if desired. Sensors tick every 10 server ticks. A placed block is saved normally with the world.
+3. **Begin a hunt**: each participating player must carry at least one instrument (EMF, radio, thermometer, UV, recorder), stand within 18 blocks of the site, then one player right-clicks `ghost_hunt_kit`. By default two people are required; `/gamerule deathWhisperHuntMinPlayers 1` permits solo testing. Gather two different evidence types before the time limit.
+4. **See a manifestation**: an apparition may spawn when examining a painting, completing a séance, or during a hunt. It's a temporary translucent humanoid entity that approaches nearby investigators without damaging or attacking them. For OP tests near an active site use `/deathwhisperinvestigate manifest`.
+5. **Capture a tape**: use `cursed_recorder` near an active haunting; the resulting tape retains its own captured phrase and investigation location in the item data. Right-click `cursed_tape` to replay it. Recordings from ghost types without voice evidence may contain just static; tapes do not reveal the ghost identity.
+6. **Finish**: inspect `/deathwhisperinvestigate journal`, collect other equipment evidence, then `/deathwhisperinvestigate guess <ghost_profile>`. The hunt awards modest XP for collecting two clues, and a separate reward for identifying the correct ghost.
+
+### New gamerules
+
+```mcfunction
+/gamerule deathWhisperManifestationsEnabled true
+/gamerule deathWhisperManifestSeconds 14
+/gamerule deathWhisperPaintingManifestChance 35
+/gamerule deathWhisperMotionSensorsEnabled true
+/gamerule deathWhisperMotionSensorPlayers false
+/gamerule deathWhisperMotionSensorRange 6
+/gamerule deathWhisperCursedRecordings true
+/gamerule deathWhisperGhostHuntsEnabled true
+/gamerule deathWhisperHuntMinPlayers 2
+/gamerule deathWhisperHuntSeconds 70
+/gamerule deathWhisperHuntActivityTicks 100
+/gamerule deathWhisperHuntManifestChance 55
+```
+
+For easier single-player testing use:
+
+```mcfunction
+/gamerule deathWhisperHuntMinPlayers 1
+/gamerule deathWhisperPaintingManifestChance 100
+```
+
+### Compatibility & limits
+
+The ghost appearances are custom entity renders, not disguised hostile zombies. Existing land claims are not bypassed by hunts: the mod does not break blocks or open protected doors. Players must still be permitted to place a motion sensor under the server's claim protection. The motion sensor does not force chunks to load. The investigation and apparition scheduler is bounded to four concurrent hunts and temporarily loaded hauntings, and ghost entities despawn rapidly.
+
+**Currently experimental:** The recorded messages are original synthesized audio plus text (not real speech recordings), the motion-sensor model is a simple illuminated cube, and hunts have no custom contract GUI. Downloaded code compilation does not substitute for actual two-client gameplay and server performance testing. Sensor use and player-visible alerts may be impacted by other mods' redstone or event hooks.
