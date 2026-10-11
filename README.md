@@ -150,13 +150,14 @@ These features have GitHub compilation tests, not automated in-world integration
 /give @s deathwhisper:emf_reader
 /give @s deathwhisper:spirit_radio
 /give @s deathwhisper:ghost_thermometer
+/give @s deathwhisper:uv_lamp
 ```
 
 **Cooperative séance:** Two players each hold ritual chalk and sneak/right-click the SAME floor block (or within four blocks). Remain within eight blocks for the channeling time. The circle emits supernatural particles and, if successful, both participants receive a clue in their own persistent journals. No chalk blocks are placed. Rituals expire if participants leave or disconnect.
 
 **Haunted paintings:** Interact with any existing vanilla painting to potentially awaken a haunting. Sneak-right-click or hold the journal while right-clicking the painting for reliable activation. The painting produces ominous ink, whispers and spectral particles; it is never broken or replaced. This version does not yet redraw or switch the original artwork.
 
-**Spirit evidence:** Ghosts near painting or ritual sites have one consistent pair of evidence types: EMF readings, spirit voices, freezing readings, or spectral ink. Use the three instruments within the investigation range of an active haunting. Your journal retains up to 24 cases across deaths, including discoveries made with other players. The active haunting itself is temporary; it can be recreated by revisiting the same painting/ritual anchor. World-seed-based ghost profiles stay stable at the same coordinates.
+**Spirit evidence:** Ghosts near painting or ritual sites have one consistent pair of evidence types: EMF readings, spirit voices, freezing readings, or spectral ink. Use the four instruments (EMF, radio, thermometer and UV lamp) within the investigation range of an active haunting. Your journal retains up to 24 cases across deaths, including discoveries made with other players. The active haunting itself is temporary; it can be recreated by revisiting the same painting/ritual anchor. World-seed-based ghost profiles stay stable at the same coordinates.
 
 **Unexplained footprints:** Rare, private spectral trails appear behind players (chance and interval below), emit unsettling footsteps, and vanish after 10 seconds. They do not place blocks or permanent entities. If a trail occurs beside a ghost site associated with spectral ink, it adds that clue to the player's journal.
 
