@@ -23,7 +23,6 @@ public final class WatcherEntity extends Zombie {
     private static final EntityDataAccessor<Integer> PEEK_ACTIVE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> TARGET_SKIN = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> MOOD = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<String> TARGET_SKIN = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.STRING);
     private UUID chosenPlayer;
     private EncounterKind encounter=EncounterKind.WATCH;
     private boolean sightingRecorded, chaseRecorded, escaped;
@@ -74,7 +73,6 @@ public final class WatcherEntity extends Zombie {
         builder.define(PEEK_SIDE, 1);
         builder.define(PEEK_ACTIVE, 0);
         builder.define(MOOD, 0);
-        builder.define(TARGET_SKIN, "");
         builder.define(TARGET_SKIN, "");
     }
 
