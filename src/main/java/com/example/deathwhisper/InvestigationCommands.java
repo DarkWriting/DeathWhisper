@@ -23,6 +23,8 @@ public final class InvestigationCommands {
               return 1;
           }))
           .then(Commands.literal("test").requires(c->c.hasPermission(2))
+            .then(Commands.literal("uv").executes(c->
+                manager.forceUvTest(c.getSource().getPlayerOrException())?1:0))
             .then(Commands.literal("footprints").executes(c->
                 manager.forceFootprints(c.getSource().getPlayerOrException())?1:0)))
           .then(Commands.literal("types").executes(c->{
