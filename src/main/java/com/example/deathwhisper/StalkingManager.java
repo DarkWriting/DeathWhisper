@@ -149,6 +149,12 @@ public final class StalkingManager {
         if(watcher==null)return false;
         switch(mode.toLowerCase(java.util.Locale.ROOT)){
             case "peek" -> watcher.debugPeek();
+            case "stalk" -> {
+                if(!watcher.debugStalk(p)) {
+                    p.sendSystemMessage(net.minecraft.network.chat.Component.literal("No reachable flank path. Try open ground or inspect nearby blocks."));
+                    return false;
+                }
+            }
             case "charge" -> watcher.debugCharge();
             case "whistle" -> watcher.debugWhistle();
             default -> {return false;}
