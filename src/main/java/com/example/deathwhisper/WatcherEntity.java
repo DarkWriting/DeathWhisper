@@ -19,6 +19,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.ClipContext;
 
 public final class WatcherEntity extends Zombie {
+    private static final EntityDataAccessor<Boolean> CLIENT_CHARGING=SynchedEntityData.defineId(WatcherEntity.class,EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> PRIVATE_FOCUS=SynchedEntityData.defineId(WatcherEntity.class,EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> PEEK_SIDE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PEEK_STYLE=SynchedEntityData.defineId(WatcherEntity.class,EntityDataSerializers.INT);
@@ -66,18 +67,34 @@ public final class WatcherEntity extends Zombie {
     }
     public String debugState() {
         return getEncounterKind().name()+" phase="+phase+" age="+lifetime+" ticks"
-           +" route="+routeTimeout+" peek="+isPeeking()+" cover="+coverSpot+" relocations="+relocations;
+           +" route="+routeTimeout+" peek="+isPeeking()+" cover="+coverSpot+" relocations="+relocations+" charging="+charging+" whistled="+whistled+" skinUUID="+entityData.get(TARGET_SKIN);
     }
 
-    public boolean isCharging() { return charging; }
+    public boolean isCharging() { return entityData.get(CLIENT_CHARGING); }
     public void setPrivateFocus(boolean v) {entityData.set(PRIVATE_FOCUS,v);}
     public boolean isPrivateFocus() {return entityData.get(PRIVATE_FOCUS);}
+    /** Operator-only visible checks of synced animation state. */
+    public void debugPeek(){
+        charging=false; entityData.set(CLIENT_CHARGING,false);
+        getNavigation().stop(); phase=6; coverTicks=0;
+        entityData.set(PEEK_STYLE,1);entityData.set(PEEK_SIDE,1);
+        entityData.set(PEEK_ACTIVE,1);
+    }
+    public void debugCharge(){
+        phase=0;getNavigation().stop();charging=true;chargeTicks=0;
+        entityData.set(CLIENT_CHARGING,true);entityData.set(PEEK_ACTIVE,0);
+    }
+    public void debugWhistle(){
+        if(level() instanceof ServerLevel l)
+            l.playSound(null,blockPosition(),DeathWhisper.WHISTLE.get(),SoundSource.HOSTILE,1.9f,1f);
+    }
     public int peekStyle() {return entityData.get(PEEK_STYLE);}
     public int peekSide() { return entityData.get(PEEK_SIDE); }
     public boolean isPeeking() { return entityData.get(PEEK_ACTIVE) != 0; }
     @Override protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(PEEK_SIDE, 1);
+        builder.define(CLIENT_CHARGING, false);
         builder.define(PRIVATE_FOCUS, false);
         builder.define(PEEK_ACTIVE, 0);
         builder.define(PEEK_STYLE, 0);
@@ -150,9 +167,14 @@ public final class WatcherEntity extends Zombie {
             target.getPersistentData().putInt("deathwhisper_curiosity",target.getPersistentData().getInt("deathwhisper_curiosity")+1);
         }
         if (charging) {
+            entityData.set(CLIENT_CHARGING,true);
             chargeTicks++;
             if (chargeTicks > 35 || distanceToSqr(target) < 80) { discard(); return; }
             if (chargeTicks % 12 == 1) getNavigation().moveTo(target, 1.65);
+            return;
+        }
+        if(phase==6){
+            if(++coverTicks>=80){phase=0;coverTicks=0;entityData.set(PEEK_ACTIVE,0);}
             return;
         }
         // Being watched or spotted by a bystander forces an immediate attempt to duck behind cover.
@@ -191,12 +213,16 @@ public final class WatcherEntity extends Zombie {
                 if (++coverTicks > 35 && peekSpot != null
                         && level.getGameRules().getBoolean(WhisperRules.PEEKING)) {
                     if (getNavigation().moveTo(peekSpot.getX()+0.5, peekSpot.getY(), peekSpot.getZ()+0.5, 0.65)) {
-                        phase = 3; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 1); peekCycles++;
+                        phase = 3; routeTimeout = 0; coverTicks=0; entityData.set(PEEK_ACTIVE, 1); peekCycles++;
                         entityData.set(PEEK_STYLE,level.random.nextInt(3));
                     }
                 }
             } else if (phase == 3) {
-                if (lastSeenTicks>11 || witnessed || getNavigation().isDone() || routeTimeout > Mth.clamp(level.getGameRules().getInt(WhisperRules.PEEK_SECONDS),1,10)*20) {
+                // Hold the pose at the cover edge instead of instantly retreating when the path finishes.
+                if(getNavigation().isDone()){getNavigation().stop();coverTicks++;}
+                int hold=Mth.clamp(level.getGameRules().getInt(WhisperRules.PEEK_SECONDS),1,10)*20;
+                if (((lastSeenTicks>12 || witnessed) && routeTimeout>16 && coverTicks>12)
+                     || coverTicks>=hold || routeTimeout>125) {
                     coverTicks = 0; phase = 4; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 0);
                     if (coverSpot != null) getNavigation().moveTo(coverSpot.getX()+0.5, coverSpot.getY(), coverSpot.getZ()+0.5, 0.85);
                 }
@@ -217,6 +243,7 @@ public final class WatcherEntity extends Zombie {
             if (level.getGameRules().getBoolean(WhisperRules.FAKE_CHARGES)
                  && level.random.nextInt(100) < chargeChance && encounter!=EncounterKind.FALSE_SIGHTING) {
                 charging = true;
+                entityData.set(CLIENT_CHARGING,true);
                 level.playSound(null, blockPosition(), DeathWhisper.WHISTLE.get(), SoundSource.HOSTILE, 2.3f, 1.2f);
                 return;
             }
@@ -311,6 +338,7 @@ public final class WatcherEntity extends Zombie {
         whistled = tag.getBoolean("Whistled");
         charging = tag.getBoolean("Charging");
         chargeTicks = tag.getInt("ChargeTicks");
+        entityData.set(CLIENT_CHARGING,charging);
         setPrivateFocus(tag.getBoolean("PrivateFocus"));
         if(tag.contains("Encounter")) {
             EncounterKind parsed=EncounterKind.parse(tag.getString("Encounter"));
