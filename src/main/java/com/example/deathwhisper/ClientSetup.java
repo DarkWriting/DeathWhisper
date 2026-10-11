@@ -13,22 +13,29 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
     value=net.neoforged.api.distmarker.Dist.CLIENT)
 public final class ClientSetup {
     private ClientSetup(){}
-    @SubscribeEvent public static void registerLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
-        event.registerLayerDefinition(WolfModel.LAYER,WolfModel::createLayer);
-    }
     @SubscribeEvent public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(DeathWhisper.WATCHER.get(),WatcherRenderer::new);
     }
     public static final class WatcherRenderer extends ZombieRenderer {
-        private static final ResourceLocation SKIN=ResourceLocation.fromNamespaceAndPath("deathwhisper","textures/entity/watcher.png");
-        private static final ResourceLocation GLOW=ResourceLocation.fromNamespaceAndPath("deathwhisper","textures/entity/watcher_eyes.png");
-        public WatcherRenderer(EntityRendererProvider.Context context) {
-            super(context);
-            // Doppelganger keeps the vanilla humanoid silhouette and skin UV layout.
-            this.addLayer(new EyesLayer<net.minecraft.world.entity.monster.Zombie,ZombieModel<net.minecraft.world.entity.monster.Zombie>>(this) {
-                @Override public RenderType renderType() { return RenderType.eyes(GLOW); }
-            });
+        private static final ResourceLocation FALLBACK=ResourceLocation.fromNamespaceAndPath("deathwhisper","textures/entity/watcher.png");
+        public WatcherRenderer(EntityRendererProvider.Context context) {super(context);}
+        @Override public ResourceLocation getTextureLocation(net.minecraft.world.entity.monster.Zombie zombie) {
+            return zombie instanceof WatcherEntity w ? MirrorSkinCache.resolve(w.getSkinTarget()) : FALLBACK;
         }
-        @Override public ResourceLocation getTextureLocation(net.minecraft.world.entity.monster.Zombie entity) { return InvertedSkins.skin(((WatcherEntity)entity).skinTarget()); }
+        @Override public void render(net.minecraft.world.entity.monster.Zombie zombie,float yaw,float frame,
+             com.mojang.blaze3d.vertex.PoseStack pose,
+             net.minecraft.client.renderer.MultiBufferSource buffers,int light) {
+            // Existing sidelong peek. No custom wolf geometry: a faithful dark mirror of its victim.
+            pose.pushPose();
+            if(zombie instanceof WatcherEntity w && w.isPeeking()) {
+                int direction=w.peekSide();
+                pose.translate(direction*.18f,0,0);
+                pose.translate(0,.95,0);
+                pose.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(direction*13));
+                pose.translate(0,-.95,0);
+            }
+            super.render(zombie,yaw,frame,pose,buffers,light);
+            pose.popPose();
+        }
     }
 }
