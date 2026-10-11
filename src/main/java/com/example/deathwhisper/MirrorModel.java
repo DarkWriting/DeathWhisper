@@ -18,11 +18,12 @@ public final class MirrorModel extends PlayerModel<WatcherEntity> {
         this.leftArm.xRot = w.isCharging() ? -.9f : this.leftArm.xRot;
         if(w.isPeeking()) {
             float side=w.peekSide();
-            head.x+=side*2.2f;
-            head.zRot=side*.28f;
+            float intensity=w.peekStyle()==0?.6f:w.peekStyle()==1?1.25f:1f;
+            head.x+=side*2.2f*intensity;
+            head.zRot=side*.28f*intensity;
             hat.x=head.x;
             hat.zRot=head.zRot;
-            body.zRot=side*.09f;
+            body.zRot=side*.09f*intensity;
             jacket.zRot=body.zRot;
             rightArm.zRot+=side*.05f;
             leftArm.zRot+=side*.05f;
