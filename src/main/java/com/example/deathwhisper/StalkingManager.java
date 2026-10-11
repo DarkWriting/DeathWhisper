@@ -131,6 +131,11 @@ public final class StalkingManager {
         w.moveTo(at.getX()+.5,at.getY(),at.getZ()+.5,0,0);
         w.setChosenPlayer(p.getUUID());
         w.setEncounterKind(kind);
+        if(level.getGameRules().getBoolean(WhisperRules.PRIVATE_FOCUS) && kind!=EncounterKind.GROUP
+             && (kind==EncounterKind.SILENT || kind==EncounterKind.PERIPHERAL
+                 || kind==EncounterKind.FALSE_SIGHTING || level.random.nextInt(5)==0)) {
+            w.setPrivateFocus(true);
+        }
         if(!level.addFreshEntity(w)) return false;
         active.put(p.getUUID(),w.getUUID());
         add(p,"encounters",1);
@@ -175,6 +180,9 @@ public final class StalkingManager {
         if(level.getGameRules().getBoolean(WhisperRules.FAKE_DEPARTURES) && roll<46)return EncounterKind.FAKE_DEPARTURE;
         return EncounterKind.values()[level.random.nextInt(EncounterKind.values().length)];
     }
+    private static int getProfileInt(ServerPlayer p,String k) {
+        return p.getPersistentData().getInt("deathwhisper_"+k);
+    }
     public static BlockPos findPosition(ServerLevel level,ServerPlayer p,int attempts) {
         return findPosition(level,p,attempts,EncounterKind.WATCH);
     }
@@ -186,6 +194,11 @@ public final class StalkingManager {
         }
         int min=Mth.clamp(level.getGameRules().getInt(WhisperRules.MIN_DISTANCE),10,64);
         int max=Mth.clamp(level.getGameRules().getInt(WhisperRules.MAX_DISTANCE),min+1,96);
+        if(level.getGameRules().getBoolean(WhisperRules.BEHAVIOR_ADAPT)
+            && level.getGameRules().getBoolean(WhisperRules.MEMORY) && getProfileInt(p,"chases")>=4) {
+            min=Mth.clamp(min+7,10,86);
+            max=Mth.clamp(max+7,min+1,96);
+        }
         Vec3 ahead=level.getGameRules().getBoolean(WhisperRules.PREDICTION)?p.getDeltaMovement().scale(15):Vec3.ZERO;
         for(int i=0;i<Math.min(attempts,48);i++){
             double angle=level.random.nextDouble()*Math.PI*2;
