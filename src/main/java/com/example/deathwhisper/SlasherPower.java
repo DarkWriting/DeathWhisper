@@ -54,7 +54,7 @@ public final class SlasherPower implements SupernaturalAbility {
         active.put(p.getUUID(),new State(now+duration*20L,now));
         p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY,duration*20,0,false,false,true));
         p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED,duration*20,0,false,false,true));
-        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.SCULK_SENSOR_CLICKING,SoundSource.PLAYERS,1f,.7f);
+        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.ENDERMAN_AMBIENT,SoundSource.PLAYERS,1f,.7f);
         p.displayClientMessage(Component.literal("Cloaked. Follow spectral tracks; right-click again to lunge."),true);
         return true;
     }
