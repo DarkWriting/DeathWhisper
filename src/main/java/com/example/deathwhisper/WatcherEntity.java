@@ -20,6 +20,7 @@ import net.minecraft.world.level.ClipContext;
 
 public final class WatcherEntity extends Zombie {
     private static final EntityDataAccessor<Integer> PEEK_SIDE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> PEEK_STYLE=SynchedEntityData.defineId(WatcherEntity.class,EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PEEK_ACTIVE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> TARGET_SKIN = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> MOOD = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
@@ -68,12 +69,14 @@ public final class WatcherEntity extends Zombie {
     }
 
     public boolean isCharging() { return charging; }
+    public int peekStyle() {return entityData.get(PEEK_STYLE);}
     public int peekSide() { return entityData.get(PEEK_SIDE); }
     public boolean isPeeking() { return entityData.get(PEEK_ACTIVE) != 0; }
     @Override protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(PEEK_SIDE, 1);
         builder.define(PEEK_ACTIVE, 0);
+        builder.define(PEEK_STYLE, 0);
         builder.define(MOOD, 0);
         builder.define(TARGET_SKIN, "");
     }
@@ -148,10 +151,30 @@ public final class WatcherEntity extends Zombie {
             if (chargeTicks % 12 == 1) getNavigation().moveTo(target, 1.65);
             return;
         }
+        // Being watched or spotted by a bystander forces an immediate attempt to duck behind cover.
+        boolean witnessed=false;
+        if(lifetime%25==0 && encounter!=EncounterKind.GROUP) {
+            for(ServerPlayer other:level.players()) {
+                if(other==target || other.isSpectator() || other.distanceToSqr(this)>625)continue;
+                if(other.hasLineOfSight(this)) {
+                    Vec3 toMe=position().subtract(other.getEyePosition()).normalize();
+                    if(other.getLookAngle().dot(toMe)>.93) {witnessed=true;break;}
+                }
+            }
+        }
+        if ((lastSeenTicks==22 || witnessed) && phase==0
+            && level.getGameRules().getBoolean(WhisperRules.REPOSITION) && relocations<6) {
+            if(seekCover(level,target)) {relocations++;return;}
+        }
         // Run using Minecraft's pathfinder rather than teleporting.
         if (phase != 0) {
             routeTimeout++;
             if (routeTimeout > 145) { getNavigation().stop(); phase = 0; coverSpot = null; entityData.set(PEEK_ACTIVE, 0); }
+            else if (phase == 5) { // Follow the player's old trail at a discreet distance.
+                if(seen || distanceToSqr(target)<144 || getNavigation().isDone()) {
+                    getNavigation().stop(); phase=0; routeTimeout=0;
+                }
+            }
             else if (phase == 1) {
                 if (coverSpot != null && distanceToSqr(Vec3.atCenterOf(coverSpot)) < 3.5) {
                     getNavigation().stop(); phase = 2; coverTicks = 0; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 0);
@@ -165,10 +188,11 @@ public final class WatcherEntity extends Zombie {
                         && level.getGameRules().getBoolean(WhisperRules.PEEKING)) {
                     if (getNavigation().moveTo(peekSpot.getX()+0.5, peekSpot.getY(), peekSpot.getZ()+0.5, 0.65)) {
                         phase = 3; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 1); peekCycles++;
+                        entityData.set(PEEK_STYLE,level.random.nextInt(3));
                     }
                 }
             } else if (phase == 3) {
-                if (getNavigation().isDone() || routeTimeout > Mth.clamp(level.getGameRules().getInt(WhisperRules.PEEK_SECONDS),1,10)*20) {
+                if (lastSeenTicks>11 || witnessed || getNavigation().isDone() || routeTimeout > Mth.clamp(level.getGameRules().getInt(WhisperRules.PEEK_SECONDS),1,10)*20) {
                     coverTicks = 0; phase = 4; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 0);
                     if (coverSpot != null) getNavigation().moveTo(coverSpot.getX()+0.5, coverSpot.getY(), coverSpot.getZ()+0.5, 0.85);
                 }
@@ -191,6 +215,15 @@ public final class WatcherEntity extends Zombie {
                 charging = true;
                 level.playSound(null, blockPosition(), DeathWhisper.WHISTLE.get(), SoundSource.HOSTILE, 2.3f, 1.2f);
                 return;
+            }
+            if(!seen && level.random.nextInt(3)==0 && encounter!=EncounterKind.FALSE_SIGHTING
+                 && level.getGameRules().getBoolean(WhisperRules.STEALTH)) {
+                // A short path that stays behind the player's viewing direction; never teleports.
+                Vec3 backward=target.getLookAngle().scale(-16);
+                BlockPos trail=BlockPos.containing(target.getX()+backward.x,target.getY(),target.getZ()+backward.z);
+                if(level.hasChunkAt(trail) && getNavigation().moveTo(trail.getX()+.5,trail.getY(),trail.getZ()+.5,1.1)) {
+                    phase=5;routeTimeout=0;return;
+                }
             }
             if (level.getGameRules().getBoolean(WhisperRules.REPOSITION)
                  && relocations < Mth.clamp(level.getGameRules().getInt(WhisperRules.RELOCATIONS),0,12) && !seen) {
