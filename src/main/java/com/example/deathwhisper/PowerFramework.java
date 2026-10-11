@@ -66,7 +66,11 @@ public final class PowerFramework {
             cooldownEnds.get(abilityId).put(player.getUUID(),now+ticks);
             player.getCooldowns().addCooldown(item,ability.hasRecastStage()?8:ticks);
         } else if(expires!=null && expires>now) {
-            player.getCooldowns().addCooldown(item,(int)Math.max(1,expires-now));
+            // Multi-stage powers need a SHORT UI cooldown between chain activations.
+            // A full remaining cooldown here prevented the third Blight rush.
+            player.getCooldowns().addCooldown(item,ability.hasRecastStage()
+                ? Math.min(8,(int)Math.max(1,expires-now))
+                : (int)Math.max(1,expires-now));
         }
         return true;
     }
