@@ -7,5 +7,10 @@
   "item.deathwhisper.ink_feather": "Ink-Stained Feather",
   "item.deathwhisper.living_harpoon": "Living Harpoon",
   "item.deathwhisper.slasher_relic": "Slasher's Relic",
-  "item.deathwhisper.security_door_controller": "Security Door Controller"
+  "item.deathwhisper.security_door_controller": "Security Door Controller",
+  "item.deathwhisper.seance_chalk": "Ritual Chalk",
+  "item.deathwhisper.field_journal": "Investigation Journal",
+  "item.deathwhisper.emf_reader": "EMF Detector",
+  "item.deathwhisper.spirit_radio": "Spirit Radio",
+  "item.deathwhisper.ghost_thermometer": "Ghost Thermometer"
 }
