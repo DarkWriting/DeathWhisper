@@ -20,11 +20,17 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class DeathWhisper {
     public static final String ID = "deathwhisper";
     public static final HorrorPowers POWERS = new HorrorPowers();
+    public static final PowerFramework FRAMEWORK = new PowerFramework(POWERS);
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(ID);
     public static final net.neoforged.neoforge.registries.DeferredItem<ChainPuzzleBox> CHAIN_BOX =
         ITEMS.registerItem("chain_puzzle_box",ChainPuzzleBox::new,new Item.Properties().stacksTo(1));
     public static final net.neoforged.neoforge.registries.DeferredItem<BlightSerum> RUSH_SERUM =
         ITEMS.registerItem("blight_serum",BlightSerum::new,new Item.Properties().stacksTo(1));
+
+    public static final net.neoforged.neoforge.registries.DeferredItem<PowerItem> GHOST_MASK =
+        ITEMS.registerItem("shrouded_mask",p->new PowerItem(p,"shrouded_mask"),new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<PowerItem> ARTIST_FEATHER =
+        ITEMS.registerItem("ink_feather",p->new PowerItem(p,"ink_feather"),new Item.Properties().stacksTo(1));
 
     private static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, ID);
     private static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, ID);
@@ -45,6 +51,8 @@ public final class DeathWhisper {
         if(event.getTabKey()==CreativeModeTabs.COMBAT) {
             event.accept(CHAIN_BOX.get());
             event.accept(RUSH_SERUM.get());
+            event.accept(GHOST_MASK.get());
+            event.accept(ARTIST_FEATHER.get());
         }
     }
     private void registerAttributes(EntityAttributeCreationEvent event) {
@@ -62,6 +70,7 @@ public final class DeathWhisper {
         StalkingManager manager = new StalkingManager();
         NeoForge.EVENT_BUS.register(manager);
         NeoForge.EVENT_BUS.register(POWERS);
+        NeoForge.EVENT_BUS.register(FRAMEWORK);
         NeoForge.EVENT_BUS.register(new WhisperCommands(manager));
     }
 }

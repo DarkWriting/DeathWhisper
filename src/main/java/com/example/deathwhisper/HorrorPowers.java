@@ -29,13 +29,7 @@ public final class HorrorPowers {
     }
 
     private static boolean canHit(ServerPlayer owner,LivingEntity target) {
-        if(target==owner || !target.isAlive() || target.isSpectator())return false;
-        if(target instanceof ServerPlayer p) {
-            return owner.serverLevel().getGameRules().getBoolean(WhisperRules.POWERS_PVP)
-                && !p.isCreative() && !p.isSpectator();
-        }
-        // Avoid applying powers to named armor stands or other nonliving decorative entities.
-        return true;
+        return PowerFramework.canAffect(owner,target);
     }
     public int fireChains(ServerPlayer owner) {
         ServerLevel level=owner.serverLevel();
