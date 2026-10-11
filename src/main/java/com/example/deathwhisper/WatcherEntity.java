@@ -2,6 +2,9 @@ package com.example.deathwhisper;
 
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +19,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.ClipContext;
 
 public final class WatcherEntity extends Zombie {
+    private static final EntityDataAccessor<Integer> PEEK_SIDE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> PEEK_ACTIVE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private UUID chosenPlayer;
     private int lifetime;
     private int relocations;
@@ -41,6 +46,13 @@ public final class WatcherEntity extends Zombie {
     @Override protected void registerGoals() { }
     public void setChosenPlayer(UUID id) { chosenPlayer = id; }
     public UUID getChosenPlayer() { return chosenPlayer; }
+    public int peekSide() { return entityData.get(PEEK_SIDE); }
+    public boolean isPeeking() { return entityData.get(PEEK_ACTIVE) != 0; }
+    @Override protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(PEEK_SIDE, 1);
+        builder.define(PEEK_ACTIVE, 0);
+    }
 
     @Override public void tick() {
         super.tick();
@@ -82,27 +94,28 @@ public final class WatcherEntity extends Zombie {
         // Run using Minecraft's pathfinder rather than teleporting.
         if (phase != 0) {
             routeTimeout++;
-            if (routeTimeout > 145) { getNavigation().stop(); phase = 0; coverSpot = null; }
+            if (routeTimeout > 145) { getNavigation().stop(); phase = 0; coverSpot = null; entityData.set(PEEK_ACTIVE, 0); }
             else if (phase == 1) {
                 if (coverSpot != null && distanceToSqr(Vec3.atCenterOf(coverSpot)) < 3.5) {
-                    getNavigation().stop(); phase = 2; coverTicks = 0; routeTimeout = 0;
+                    getNavigation().stop(); phase = 2; coverTicks = 0; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 0);
                 } else if (getNavigation().isDone()) {
                     phase = 0; coverSpot = null;
                 }
             } else if (phase == 2) {
                 getNavigation().stop();
+                entityData.set(PEEK_ACTIVE, 0);
                 if (++coverTicks > 35 && peekSpot != null) {
                     if (getNavigation().moveTo(peekSpot.getX()+0.5, peekSpot.getY(), peekSpot.getZ()+0.5, 0.65)) {
-                        phase = 3; routeTimeout = 0;
+                        phase = 3; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 1);
                     }
                 }
             } else if (phase == 3) {
                 if (getNavigation().isDone() || routeTimeout > 45) {
-                    coverTicks = 0; phase = 4; routeTimeout = 0;
+                    coverTicks = 0; phase = 4; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 0);
                     if (coverSpot != null) getNavigation().moveTo(coverSpot.getX()+0.5, coverSpot.getY(), coverSpot.getZ()+0.5, 0.85);
                 }
             } else if (phase == 4 && (getNavigation().isDone() || routeTimeout > 50)) {
-                phase = 2; coverTicks = -40; routeTimeout = 0;
+                phase = 2; coverTicks = -40; routeTimeout = 0; entityData.set(PEEK_ACTIVE, 0);
             }
             return;
         }
@@ -143,6 +156,10 @@ public final class WatcherEntity extends Zombie {
                 if (!getNavigation().moveTo(path, 1.25)) continue;
                 coverSpot = spot;
                 peekSpot = peek;
+                // Use the target-facing cross product to choose the tilt direction.
+                Vec3 toTarget = target.position().subtract(position());
+                Vec3 toPeek = Vec3.atCenterOf(peek).subtract(Vec3.atCenterOf(spot));
+                entityData.set(PEEK_SIDE, (toTarget.x * toPeek.z - toTarget.z * toPeek.x) >= 0 ? 1 : -1);
                 phase = 1; routeTimeout = 0;
                 return true;
             }
@@ -183,6 +200,6 @@ public final class WatcherEntity extends Zombie {
         charging = tag.getBoolean("Charging");
         chargeTicks = tag.getInt("ChargeTicks");
         // Recalculate paths after a chunk/server reload.
-        phase = 0; coverSpot = null; peekSpot = null;
+        phase = 0; coverSpot = null; peekSpot = null; entityData.set(PEEK_ACTIVE, 0);
     }
 }
