@@ -242,3 +242,30 @@ For easier single-player testing use:
 The ghost appearances are custom entity renders, not disguised hostile zombies. Existing land claims are not bypassed by hunts: the mod does not break blocks or open protected doors. Players must still be permitted to place a motion sensor under the server's claim protection. The motion sensor does not force chunks to load. The investigation and apparition scheduler is bounded to four concurrent hunts and temporarily loaded hauntings, and ghost entities despawn rapidly.
 
 **Currently experimental:** The recorded messages are original synthesized audio plus text (not real speech recordings), the motion-sensor model is a simple illuminated cube, and hunts have no custom contract GUI. Downloaded code compilation does not substitute for actual two-client gameplay and server performance testing. Sensor use and player-visible alerts may be impacted by other mods' redstone or event hooks.
+
+
+## v0.8.1 QA repair and deterministic retests
+
+This update follows reports of 15 passing checks and 16 failing checks. Compilation alone does not verify in-game behaviour.
+
+Changes: normalizes verified Mojang skin URLs to HTTPS for inverted skins, synchronizes charge animation state, holds the peek pose after arriving at cover, credits already-discovered evidence in hunts, provides clearer séance join/cancellation feedback, and improves first natural encounter timing. Natural stalking still requires Survival or Adventure, not Creative or Spectator.
+
+Operator tests (stay 10+ blocks away from a watcher; test in a separate world):
+
+    /deathwhisper clear
+    /deathwhisper force
+    /deathwhisper test peek
+    /deathwhisper test whistle
+    /deathwhisper test charge
+    /deathwhisper debug
+    /deathwhisperinvestigate diagnose
+    /deathwhisperinvestigate test footprints
+
+For individual seance/hunt isolation:
+
+    /gamerule deathWhisperSeanceMinPlayers 1
+    /gamerule deathWhisperHuntMinPlayers 1
+
+Switch SeanceMinPlayers back to 2 for cooperative play. The diagnose command reveals the seeded ghost type to server OPs and should not be used for normal mystery-solving. Test footprints draw visible spectral markers ahead; natural footprints appear behind a Survival/Adventure player.
+
+If tests still fail, report what is seen in chat when activating the item, whether a ghost/stalker entity appears, and client/server latest.log. Do not treat this build as multiplayer-verified.
