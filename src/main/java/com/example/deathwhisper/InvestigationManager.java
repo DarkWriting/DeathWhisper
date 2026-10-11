@@ -311,6 +311,57 @@ public final class InvestigationManager {
         }
     }
 
+    /** Explicit OP test: put recognizable footprint flashes IN FRONT of the player. */
+    public boolean forceFootprints(ServerPlayer p){
+        ServerLevel level=p.serverLevel();
+        if(!feature(level,WhisperRules.FOOTPRINTS_ENABLED)) {
+            p.sendSystemMessage(Component.literal("Footprints disabled by gamerule."));
+            return false;
+        }
+        Vec3 direction=p.getLookAngle().multiply(1,0,1).normalize();
+        if(direction.lengthSqr()<0.01)direction=new Vec3(0,0,1);
+        Vec3 side=new Vec3(-direction.z,0,direction.x);
+        List<Vec3> feet=new ArrayList<>();
+        for(int i=0;i<10;i++){
+            Vec3 origin=p.position().add(direction.scale(3+i*.58))
+                .add(side.scale(i%2==0?.27:-.27));
+            BlockPos sample=BlockPos.containing(origin);
+            if(!level.hasChunkAt(sample))continue;
+            for(int dy=2;dy>=-3;dy--){
+                BlockPos stand=sample.offset(0,dy,0);
+                if(level.getBlockState(stand).isAir()
+                   &&level.getBlockState(stand.below()).isSolidRender(level,stand.below())){
+                    feet.add(new Vec3(origin.x,stand.getY()+.08,origin.z));break;
+                }
+            }
+        }
+        if(feet.isEmpty()){
+            p.sendSystemMessage(Component.literal("Couldn't find solid ground in loaded chunks for footprints."));
+            return false;
+        }
+        trails.put(p.getUUID(),new FootTrail(level.dimension(),p.getUUID(),feet,ticks+200));
+        p.sendSystemMessage(Component.literal("§bSpectral footsteps have appeared on the ground ahead. They fade in ten seconds."));
+        level.playSound(null,BlockPos.containing(feet.get(0)),DeathWhisper.FOOTSTEPS.get(),
+            SoundSource.AMBIENT,1f,.7f);
+        return true;
+    }
+    /** Operator-only investigation state: reveals the seeded profile for verifying equipment. */
+    public String diagnostics(ServerPlayer p){
+        Haunting site=nearby(p,28);
+        int count=cases(p).getAllKeys().size();
+        if(site==null)return "No active haunting within 28 blocks. Journal cases="+count
+            +". Use sneak-right-click on a painting to open a haunting.";
+        String id=key(site.dimension,site.focus);
+        int found=cases(p).getCompound(id).getInt("evidence");
+        Seance ritual=rituals.get(id);
+        GhostHunt hunt=hunts.get(id);
+        return "Ghost investigation "+site.focus+" type="+site.ghost.name()
+            +" expected="+GhostProfile.evidenceText(site.ghost.evidence)
+            +" collected="+GhostProfile.evidenceText(found)
+            +" séance="+(ritual==null?"none":ritual.members.size()+" members, finish="+ritual.finishing)
+            +" hunt="+(hunt==null?"none":hunt.team.size()+" members, clues="+hunt.clues)
+            +" journalCases="+count;
+    }
     public boolean showJournal(ServerPlayer p){
         CompoundTag all=cases(p);
         p.sendSystemMessage(Component.literal("§8[§5Investigation Journal§8] §7"+all.getAllKeys().size()+" recorded cases"));
@@ -379,7 +430,10 @@ public final class InvestigationManager {
         ServerLevel level=p.serverLevel();
         if(!feature(level,WhisperRules.SEANCES_ENABLED))return false;
         if(p.isSpectator()||!p.isAlive())return false;
-        if(!level.hasChunkAt(clicked) || !level.getBlockState(clicked).isSolidRender(level,clicked))return false;
+        if(!level.hasChunkAt(clicked) || !level.getBlockState(clicked).isSolidRender(level,clicked)){
+            p.sendSystemMessage(Component.literal("§cThe ritual needs a loaded, solid floor block (stone or planks)."));
+            return false;
+        }
         if(rituals.size()>=8 && rituals.values().stream().noneMatch(s->s.site.dimension==level.dimension()
            && s.site.focus.distSqr(clicked)<24))return false;
         String key=null;
@@ -399,7 +453,8 @@ public final class InvestigationManager {
             return true;
         }
         p.sendSystemMessage(Component.literal("§5[Seance] §7Circle joined: "+ritual.members.size()+" investigators. Remain within eight blocks."));
-        if(ritual.members.size()>=2 && ritual.finishing<0){
+        int required=Mth.clamp(level.getGameRules().getInt(WhisperRules.SEANCE_MIN_PLAYERS),1,4);
+        if(ritual.members.size()>=required && ritual.finishing<0){
             int seconds=Mth.clamp(level.getGameRules().getInt(WhisperRules.SEANCE_SECONDS),5,45);
             ritual.finishing=ticks+20L*seconds;
             for(UUID id:ritual.members){
@@ -475,7 +530,14 @@ public final class InvestigationManager {
                     return player==null || !player.isAlive() || player.level()!=level ||
                         player.distanceToSqr(at.getX()+.5,at.getY()+1,at.getZ()+.5)>64;
                 });
-                if(ritual.finishing>=0 && ritual.members.size()<2)return true;
+                int required=Mth.clamp(level.getGameRules().getInt(WhisperRules.SEANCE_MIN_PLAYERS),1,4);
+                if(ritual.finishing>=0 && ritual.members.size()<required){
+                    for(UUID id:ritual.members){
+                        ServerPlayer witness=server.getPlayerList().getPlayer(id);
+                        if(witness!=null)witness.sendSystemMessage(Component.literal("§c[Seance] Circle broken: not enough participants remained nearby."));
+                    }
+                    return true;
+                }
                 level.sendParticles(ParticleTypes.SOUL,at.getX()+.5,at.getY()+1.1,at.getZ()+.5,
                    5,1.9,.15,1.9,.02);
                 if(ritual.finishing>=0 && ticks>=ritual.finishing){
@@ -544,6 +606,7 @@ public final class InvestigationManager {
                     trails.put(p.getUUID(),new FootTrail(level.dimension(),p.getUUID(),positions,ticks+20L*10));
                     Vec3 foot=positions.get(positions.size()-1);
                     level.playSound(null,BlockPos.containing(foot),DeathWhisper.FOOTSTEPS.get(),SoundSource.AMBIENT,.55f,.7f);
+                    p.displayClientMessage(Component.literal("§7You hear footsteps behind you..."),true);
                     Haunting nearby=nearby(p,24);
                     if(nearby!=null && nearby.ghost.has(GhostProfile.INK))record(p,nearby,GhostProfile.INK);
                 }
