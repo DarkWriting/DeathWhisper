@@ -171,6 +171,15 @@ public final class InvestigationManager {
                 p.sendSystemMessage(Component.literal("§7[Spirit Radio] ...static..."));
                 record(p,site,0);
             }
+        }else if(tool==InvestigationItem.Tool.UV){
+            if(site.ghost.has(GhostProfile.INK)){
+                p.sendSystemMessage(Component.literal("§5UV LAMP: strange ink-like fingerprints glow on nearby surfaces."));
+                level.sendParticles(ParticleTypes.SQUID_INK,site.focus.getX()+.5,site.focus.getY()+1,site.focus.getZ()+.5,9,.6,.45,.6,.02);
+                record(p,site,GhostProfile.INK);
+            }else{
+                p.sendSystemMessage(Component.literal("§7UV LAMP: no spectral residue detected."));
+                record(p,site,0);
+            }
         }else if(tool==InvestigationItem.Tool.THERMOMETER){
             int degrees=site.ghost.has(GhostProfile.FROST)? -4+level.random.nextInt(7): 8+level.random.nextInt(15);
             p.sendSystemMessage(Component.literal("§bThermometer: "+degrees+"°C"));
