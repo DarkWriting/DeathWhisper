@@ -98,6 +98,7 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.BooleanValue> SLASHER_TRACK_PLAYERS=bool("SlasherTrackPlayers",false);
     // Player-owned existing iron-door network: only loaded same-dimension destinations.
     public static final GameRules.Key<GameRules.BooleanValue> SECURITY_ENABLED=bool("SecurityEnabled",true);
+    public static final GameRules.Key<GameRules.BooleanValue> SECURITY_TRAVEL=bool("SecurityTravel",false);
     public static final GameRules.Key<GameRules.IntegerValue> SECURITY_MAX_DOORS=integer("SecurityMaxDoors",8);
     public static final GameRules.Key<GameRules.IntegerValue> SECURITY_SCAN_RADIUS=integer("SecurityScanRadius",8);
 }
