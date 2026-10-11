@@ -269,3 +269,31 @@ For individual seance/hunt isolation:
 Switch SeanceMinPlayers back to 2 for cooperative play. The diagnose command reveals the seeded ghost type to server OPs and should not be used for normal mystery-solving. Test footprints draw visible spectral markers ahead; natural footprints appear behind a Survival/Adventure player.
 
 If tests still fail, report what is seen in chat when activating the item, whether a ghost/stalker entity appears, and client/server latest.log. Do not treat this build as multiplayer-verified.
+
+## v0.8.2 UV-evidence and stalker motion repair
+
+**UV evidence is not universal.** Wailer, Pale Walker and Mourner do not leave ink; Inkbound, Hollow and Witness do. Negative UV results are expected for a ghost that lacks spectral ink. The lamp now explicitly reports POSITIVE or NEGATIVE, emits a local positive signal and records positive readings in the investigation journal.
+
+Use the following operator test to produce an actual ghost type with confirmed spectral ink at a safe loaded location near your feet. The test temporarily pins your active case for 90 seconds, without faking a positive reading:
+
+    /deathwhisperinvestigate test uv
+
+Then right-click the UV lamp, read the chat and journal, and run /deathwhisperinvestigate diagnose. This test should produce POSITIVE and a Spectral ink entry. If a normal haunting is negative, use diagnose to check whether that profile is supposed to have ink.
+
+**Active stalking:** A watcher previously had no vanilla AI goals and often did nothing between scare phases. It now attempts bounded Minecraft pathfinding to a reachable flanking position every few seconds, including a short visible move after being seen. No teleporting or direct damage. Spawn positions are biased toward the near portion of the configured range, and large predicted-player offsets have been reduced. New world defaults are 14–30 blocks, but existing worlds preserve their saved gamerules.
+
+Existing worlds: set a closer range explicitly (the mod cannot silently replace world gamerules):
+
+    /gamerule deathWhisperMinDistance 14
+    /gamerule deathWhisperMaxDistance 30
+    /gamerule deathWhisperDuration 60
+    /gamerule deathWhisperPathBudget 12
+
+Repeatable OP movement check on relatively level ground with Death at least 15 blocks away:
+
+    /deathwhisper clear
+    /deathwhisper force
+    /deathwhisper test stalk
+    /deathwhisper debug
+
+The debug output includes whether Death's navigation is active and how many path searches failed. Test in Survival mode, ideally with a tree or obstacle nearby; open terrain has fewer hiding opportunities. Stalking and UV must still be validated in-game despite a successful CI build.
