@@ -21,6 +21,7 @@ public final class DeathWhisper {
     public static final String ID = "deathwhisper";
     public static final HorrorPowers POWERS = new HorrorPowers();
     public static final PowerFramework FRAMEWORK = new PowerFramework(POWERS);
+    public static final InvestigationManager INVESTIGATIONS = new InvestigationManager();
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(ID);
     public static final net.neoforged.neoforge.registries.DeferredItem<ChainPuzzleBox> CHAIN_BOX =
         ITEMS.registerItem("chain_puzzle_box",ChainPuzzleBox::new,new Item.Properties().stacksTo(1));
@@ -39,6 +40,17 @@ public final class DeathWhisper {
         ITEMS.registerItem("slasher_relic",p->new PowerItem(p,"slasher_relic"),new Item.Properties().stacksTo(1));
     public static final net.neoforged.neoforge.registries.DeferredItem<SecurityDoorController> SECURITY_CONTROLLER =
         ITEMS.registerItem("security_door_controller",SecurityDoorController::new,new Item.Properties().stacksTo(1));
+
+    public static final net.neoforged.neoforge.registries.DeferredItem<InvestigationItem> SEANCE_CHALK =
+        ITEMS.registerItem("seance_chalk",p->new InvestigationItem(p,InvestigationItem.Tool.CHALK),new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<InvestigationItem> FIELD_JOURNAL =
+        ITEMS.registerItem("field_journal",p->new InvestigationItem(p,InvestigationItem.Tool.JOURNAL),new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<InvestigationItem> EMF_READER =
+        ITEMS.registerItem("emf_reader",p->new InvestigationItem(p,InvestigationItem.Tool.EMF),new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<InvestigationItem> SPIRIT_RADIO =
+        ITEMS.registerItem("spirit_radio",p->new InvestigationItem(p,InvestigationItem.Tool.SPIRIT_RADIO),new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<InvestigationItem> GHOST_THERMOMETER =
+        ITEMS.registerItem("ghost_thermometer",p->new InvestigationItem(p,InvestigationItem.Tool.THERMOMETER),new Item.Properties().stacksTo(1));
 
     private static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, ID);
     private static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, ID);
@@ -64,6 +76,11 @@ public final class DeathWhisper {
             event.accept(LIVING_HARPOON.get());
             event.accept(SLASHER_RELIC.get());
             event.accept(SECURITY_CONTROLLER.get());
+            event.accept(SEANCE_CHALK.get());
+            event.accept(FIELD_JOURNAL.get());
+            event.accept(EMF_READER.get());
+            event.accept(SPIRIT_RADIO.get());
+            event.accept(GHOST_THERMOMETER.get());
         }
     }
     private void registerAttributes(EntityAttributeCreationEvent event) {
@@ -82,6 +99,8 @@ public final class DeathWhisper {
         NeoForge.EVENT_BUS.register(manager);
         NeoForge.EVENT_BUS.register(POWERS);
         NeoForge.EVENT_BUS.register(FRAMEWORK);
+        NeoForge.EVENT_BUS.register(INVESTIGATIONS);
+        NeoForge.EVENT_BUS.register(new InvestigationCommands(INVESTIGATIONS));
         NeoForge.EVENT_BUS.register(new WhisperCommands(manager));
     }
 }
