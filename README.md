@@ -137,3 +137,52 @@ Sneak + right-click TWO existing iron doors to register them for your player. Ri
 **Caution:** The security system does NOT currently integrate Open Parties and Claims protection checks; movement between registered doors may bypass claim access restrictions. Test with trusted players, and do not enable on a public production server until claim integration and multiplayer tests have been completed.
 
 These features have GitHub compilation tests, not automated in-world integration tests.
+
+## Paranormal investigation v0.7 (experimental; NeoForge 1.21.1)
+
+**This expansion is separate from combat powers.** It features original ghost profiles inspired by cooperative ghost-hunting games without copying their copyrighted names, models or audio. Everything operates on loaded chunks and is designed not to destroy blocks, paintings or bases.
+
+### Get the five tools
+
+```mcfunction
+/give @s deathwhisper:seance_chalk
+/give @s deathwhisper:field_journal
+/give @s deathwhisper:emf_reader
+/give @s deathwhisper:spirit_radio
+/give @s deathwhisper:ghost_thermometer
+```
+
+**Cooperative séance:** Two players each hold ritual chalk and sneak/right-click the SAME floor block (or within four blocks). Remain within eight blocks for the channeling time. The circle emits supernatural particles and, if successful, both participants receive a clue in their own persistent journals. No chalk blocks are placed. Rituals expire if participants leave or disconnect.
+
+**Haunted paintings:** Interact with any existing vanilla painting to potentially awaken a haunting. Sneak-right-click or hold the journal while right-clicking the painting for reliable activation. The painting produces ominous ink, whispers and spectral particles; it is never broken or replaced. This version does not yet redraw or switch the original artwork.
+
+**Spirit evidence:** Ghosts near painting or ritual sites have one consistent pair of evidence types: EMF readings, spirit voices, freezing readings, or spectral ink. Use the three instruments within the investigation range of an active haunting. Your journal retains up to 24 cases across deaths, including discoveries made with other players. The active haunting itself is temporary; it can be recreated by revisiting the same painting/ritual anchor. World-seed-based ghost profiles stay stable at the same coordinates.
+
+**Unexplained footprints:** Rare, private spectral trails appear behind players (chance and interval below), emit unsettling footsteps, and vanish after 10 seconds. They do not place blocks or permanent entities. If a trail occurs beside a ghost site associated with spectral ink, it adds that clue to the player's journal.
+
+**Guessing the ghost:**
+
+```mcfunction
+/deathwhisperinvestigate journal
+/deathwhisperinvestigate types
+/deathwhisperinvestigate guess wailer
+```
+
+Each of the six original ghost profiles has a unique two-evidence combination. A correct identification, after collecting both clues, records the case as solved and grants a modest amount of XP.
+
+**World gamerules:**
+
+```mcfunction
+/gamerule deathWhisperInvestigationsEnabled true
+/gamerule deathWhisperSeancesEnabled true
+/gamerule deathWhisperHauntedPaintings true
+/gamerule deathWhisperUnexplainedFootprints true
+/gamerule deathWhisperSeanceSeconds 14
+/gamerule deathWhisperInvestigationRange 24
+/gamerule deathWhisperFootprintInterval 240
+/gamerule deathWhisperFootprintChance 30
+```
+
+For accelerated testing, set FootprintInterval 30 and FootprintChance 100, then stand in survival mode.
+
+**Important limitations:** No full ghost NPC/3D apparition, live voice recognition, UV scanner, client evidence GUI, or actual painting-art transformations in this first version. Haunted paintings show effects rather than changing pictures. Investigation events do not intentionally modify blocks or teleport anyone, making them safer to try on servers using claims mods. Compile success is not proof of correct in-game behavior.
