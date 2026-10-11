@@ -42,7 +42,7 @@ def write(name, palette):
         box(8,5,10,9,light)
         box(9,3,11,6,metal)
         box(23,19,26,22,red)
-    else: # ghost_thermometer
+    elif name=="ghost_thermometer":
         box(14,4,19,23,metal)
         box(15,5,18,24,light)
         box(16,8,17,24,cyan)
@@ -51,12 +51,19 @@ def write(name, palette):
             for x in range(10,23):
                 if (x-16)**2+(y-22)**2<32:image[y][x]=metal
                 if (x-16)**2+(y-22)**2<17:image[y][x]=cyan
+    else: # ultraviolet lamp
+        box(6,8,27,19,dark)
+        box(9,9,23,17,violet)
+        box(12,11,20,15,(204,103,249,255))
+        box(8,20,24,26,metal)
+        box(13,25,20,30,dark)
+        for x in (10,16,22):box(x,6,x+1,8,light)
     def chunk(name,data):
         return struct.pack(">I",len(data))+name+data+struct.pack(">I",zlib.crc32(name+data)&0xffffffff)
     raw=b"".join(b"\x00"+b"".join(bytes(pixel) for pixel in row) for row in image)
     png=b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",32,32,8,6,0,0,0))
     png+=chunk(b"IDAT",zlib.compress(raw,9))+chunk(b"IEND",b"")
     (root/(name+".png")).write_bytes(png)
-for name in ["seance_chalk","field_journal","emf_reader","spirit_radio","ghost_thermometer"]:
+for name in ["seance_chalk","field_journal","emf_reader","spirit_radio","ghost_thermometer","uv_lamp"]:
     write(name,None)
 print("Investigation tool textures generated.")
