@@ -36,6 +36,14 @@ public final class ClientSetup {
                 @Override public RenderType renderType() {return RenderType.eyes(GLOW);}
             });
         }
+        @Override public boolean shouldRender(WatcherEntity watcher,
+             net.minecraft.client.renderer.culling.Frustum frustum,double x,double y,double z) {
+            var self=Minecraft.getInstance().player;
+            // Local-only visual: the server still tracks the entity, but bystanders don't draw it.
+            if(watcher.isPrivateFocus() && (self==null || !self.getUUID().equals(watcher.getSkinTarget())))
+                return false;
+            return super.shouldRender(watcher,frustum,x,y,z);
+        }
         @Override public ResourceLocation getTextureLocation(WatcherEntity watcher) {
             return MirrorSkinCache.resolve(watcher.getSkinTarget());
         }
