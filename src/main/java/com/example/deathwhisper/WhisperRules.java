@@ -110,4 +110,18 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.IntegerValue> INVESTIGATION_RANGE=integer("InvestigationRange",24);
     public static final GameRules.Key<GameRules.IntegerValue> FOOTPRINT_INTERVAL=integer("FootprintInterval",240);
     public static final GameRules.Key<GameRules.IntegerValue> FOOTPRINT_CHANCE=integer("FootprintChance",30);
+
+    // Equipment-driven supernatural encounters, no automatic damage or terrain damage.
+    public static final GameRules.Key<GameRules.BooleanValue> MANIFESTATIONS_ENABLED=bool("ManifestationsEnabled",true);
+    public static final GameRules.Key<GameRules.IntegerValue> MANIFEST_SECONDS=integer("ManifestSeconds",14);
+    public static final GameRules.Key<GameRules.IntegerValue> PAINTING_MANIFEST_CHANCE=integer("PaintingManifestChance",35);
+    public static final GameRules.Key<GameRules.BooleanValue> MOTION_SENSORS_ENABLED=bool("MotionSensorsEnabled",true);
+    public static final GameRules.Key<GameRules.BooleanValue> MOTION_SENSOR_PLAYERS=bool("MotionSensorPlayers",false);
+    public static final GameRules.Key<GameRules.IntegerValue> MOTION_SENSOR_RANGE=integer("MotionSensorRange",6);
+    public static final GameRules.Key<GameRules.BooleanValue> CURSED_RECORDINGS=bool("CursedRecordings",true);
+    public static final GameRules.Key<GameRules.BooleanValue> GHOST_HUNTS_ENABLED=bool("GhostHuntsEnabled",true);
+    public static final GameRules.Key<GameRules.IntegerValue> HUNT_MIN_PLAYERS=integer("HuntMinPlayers",2);
+    public static final GameRules.Key<GameRules.IntegerValue> HUNT_SECONDS=integer("HuntSeconds",70);
+    public static final GameRules.Key<GameRules.IntegerValue> HUNT_ACTIVITY_TICKS=integer("HuntActivityTicks",100);
+    public static final GameRules.Key<GameRules.IntegerValue> HUNT_MANIFEST_CHANCE=integer("HuntManifestChance",55);
 }
