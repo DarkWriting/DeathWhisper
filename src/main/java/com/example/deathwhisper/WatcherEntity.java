@@ -10,6 +10,10 @@ import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.level.Level;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.level.ClipContext;
 
 public final class WatcherEntity extends Zombie {
     private UUID chosenPlayer;
@@ -19,12 +23,18 @@ public final class WatcherEntity extends Zombie {
     private boolean charging;
     private int chargeTicks;
     private int lastSeenTicks;
+    private BlockPos coverSpot;
+    private BlockPos peekSpot;
+    private int coverTicks;
+    private int routeTimeout;
+    private int phase; // 0 watch, 1 run for cover, 2 hide, 3 peek, 4 return
+
 
     public WatcherEntity(EntityType<? extends Zombie> type, Level level) {
         super(type, level);
         setInvulnerable(true);
         setSilent(true);
-        setNoAi(true);
+        setNoAi(false);
     }
     @Override protected boolean isSunSensitive() { return false; }
     @Override public boolean doHurtTarget(net.minecraft.world.entity.Entity entity) { return false; }
@@ -66,15 +76,37 @@ public final class WatcherEntity extends Zombie {
         if (charging) {
             chargeTicks++;
             if (chargeTicks > 35 || distanceToSqr(target) < 80) { discard(); return; }
-            var movement = target.position().subtract(position());
-            if (movement.lengthSqr() > 0.01) {
-                movement = movement.normalize().scale(0.42);
-                setPos(getX()+movement.x, getY(), getZ()+movement.z);
+            if (chargeTicks % 12 == 1) getNavigation().moveTo(target, 1.65);
+            return;
+        }
+        // Run using Minecraft's pathfinder rather than teleporting.
+        if (phase != 0) {
+            routeTimeout++;
+            if (routeTimeout > 145) { getNavigation().stop(); phase = 0; coverSpot = null; }
+            else if (phase == 1) {
+                if (coverSpot != null && distanceToSqr(Vec3.atCenterOf(coverSpot)) < 3.5) {
+                    getNavigation().stop(); phase = 2; coverTicks = 0; routeTimeout = 0;
+                } else if (getNavigation().isDone()) {
+                    phase = 0; coverSpot = null;
+                }
+            } else if (phase == 2) {
+                getNavigation().stop();
+                if (++coverTicks > 35 && peekSpot != null) {
+                    if (getNavigation().moveTo(peekSpot.getX()+0.5, peekSpot.getY(), peekSpot.getZ()+0.5, 0.65)) {
+                        phase = 3; routeTimeout = 0;
+                    }
+                }
+            } else if (phase == 3) {
+                if (getNavigation().isDone() || routeTimeout > 45) {
+                    coverTicks = 0; phase = 4; routeTimeout = 0;
+                    if (coverSpot != null) getNavigation().moveTo(coverSpot.getX()+0.5, coverSpot.getY(), coverSpot.getZ()+0.5, 0.85);
+                }
+            } else if (phase == 4 && (getNavigation().isDone() || routeTimeout > 50)) {
+                phase = 2; coverTicks = -40; routeTimeout = 0;
             }
             return;
         }
-        // An observed watcher stays briefly, then vanishes; unseen watchers reposition.
-        if (lastSeenTicks > 60 && lifetime > 100) { discard(); return; }
+        if (lastSeenTicks > 80 && lifetime > 125) { discard(); return; }
         if (lifetime > 100 && lifetime % 85 == 0) {
             if (level.getGameRules().getBoolean(WhisperRules.FAKE_CHARGES)
                  && level.random.nextInt(100) < Mth.clamp(level.getGameRules().getInt(WhisperRules.CHARGE_CHANCE), 0, 100)) {
@@ -83,15 +115,50 @@ public final class WatcherEntity extends Zombie {
                 return;
             }
             if (level.getGameRules().getBoolean(WhisperRules.REPOSITION) && relocations < 3 && !seen) {
-                BlockPos next = StalkingManager.findPosition(level, target, 14);
-                if (next != null) {
-                    teleportTo(next.getX()+.5, next.getY(), next.getZ()+.5);
+                if (seekCover(level, target)) {
                     relocations++;
                     whistled = false;
-                    lifetime = Math.max(lifetime, 70);
                 }
             }
         }
+    }
+    // Find reachable cover with an opaque block between player and hiding spot,
+    // then a nearby peek tile from which the player can be seen.
+    private boolean seekCover(ServerLevel level, ServerPlayer target) {
+        for (int attempt = 0; attempt < 35; attempt++) {
+            int x = blockPosition().getX() + level.random.nextInt(29)-14;
+            int z = blockPosition().getZ() + level.random.nextInt(29)-14;
+            for (int dy = -3; dy <= 3; dy++) {
+                BlockPos spot = new BlockPos(x, blockPosition().getY()+dy, z);
+                if (!walkable(level, spot) || spot.distSqr(target.blockPosition()) < 140) continue;
+                if (visibleFrom(level, target, spot)) continue;
+                var path = getNavigation().createPath(spot, 1);
+                if (path == null || !path.canReach()) continue;
+                BlockPos peek = null;
+                for (var direction : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                    BlockPos side = spot.relative(direction);
+                    if (walkable(level, side) && visibleFrom(level, target, side)) { peek = side; break; }
+                }
+                if (peek == null) continue;
+                if (!getNavigation().moveTo(path, 1.25)) continue;
+                coverSpot = spot;
+                peekSpot = peek;
+                phase = 1; routeTimeout = 0;
+                return true;
+            }
+        }
+        return false;
+    }
+    private boolean walkable(ServerLevel level, BlockPos p) {
+        return level.hasChunkAt(p) && level.getBlockState(p).isAir()
+            && level.getBlockState(p.above()).isAir()
+            && level.getBlockState(p.below()).isSolidRender(level, p.below());
+    }
+    private boolean visibleFrom(ServerLevel level, ServerPlayer player, BlockPos p) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 end = Vec3.atCenterOf(p).add(0, 0.65, 0);
+        BlockHitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS;
     }
     private boolean playerFacing(ServerPlayer player) {
         var direction = position().subtract(player.getEyePosition()).normalize();
@@ -105,6 +172,7 @@ public final class WatcherEntity extends Zombie {
         tag.putBoolean("Whistled", whistled);
         tag.putBoolean("Charging", charging);
         tag.putInt("ChargeTicks", chargeTicks);
+        tag.putInt("Phase", phase);
     }
     @Override public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
@@ -114,5 +182,7 @@ public final class WatcherEntity extends Zombie {
         whistled = tag.getBoolean("Whistled");
         charging = tag.getBoolean("Charging");
         chargeTicks = tag.getInt("ChargeTicks");
+        // Recalculate paths after a chunk/server reload.
+        phase = 0; coverSpot = null; peekSpot = null;
     }
 }
