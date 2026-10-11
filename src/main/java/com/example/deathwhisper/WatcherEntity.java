@@ -22,6 +22,7 @@ public final class WatcherEntity extends Zombie {
     private static final EntityDataAccessor<Integer> PEEK_SIDE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PEEK_ACTIVE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> MOOD = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<String> TARGET_SKIN = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.STRING);
     private UUID chosenPlayer;
     private EncounterKind encounter=EncounterKind.WATCH;
     private boolean sightingRecorded, chaseRecorded, escaped;
@@ -49,7 +50,8 @@ public final class WatcherEntity extends Zombie {
     @Override protected boolean isSunSensitive() { return false; }
     @Override public boolean doHurtTarget(net.minecraft.world.entity.Entity entity) { return false; }
     @Override protected void registerGoals() { }
-    public void setChosenPlayer(UUID id) { chosenPlayer = id; }
+    public void setChosenPlayer(UUID id) { chosenPlayer = id; entityData.set(TARGET_SKIN, id.toString()); }
+    public UUID skinTarget() { try { return UUID.fromString(entityData.get(TARGET_SKIN)); } catch(Exception e) { return null; } }
     public UUID getChosenPlayer() { return chosenPlayer; }
     public void setEncounterKind(EncounterKind kind) {
         encounter=kind;
@@ -71,6 +73,7 @@ public final class WatcherEntity extends Zombie {
         builder.define(PEEK_SIDE, 1);
         builder.define(PEEK_ACTIVE, 0);
         builder.define(MOOD, 0);
+        builder.define(TARGET_SKIN, "");
     }
 
     @Override public void tick() {
@@ -85,7 +88,7 @@ public final class WatcherEntity extends Zombie {
                 double d = distanceToSqr(candidate);
                 if (d < best) { nearest = candidate; best = d; }
             }
-            if (nearest != null) chosenPlayer = nearest.getUUID();
+            if (nearest != null) setChosenPlayer(nearest.getUUID());
         }
         ServerPlayer target = chosenPlayer == null ? null : level.getServer().getPlayerList().getPlayer(chosenPlayer);
         if (target == null || target.level() != level || target.isSpectator()
@@ -262,7 +265,7 @@ public final class WatcherEntity extends Zombie {
     }
     @Override public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        if (tag.hasUUID("ChosenPlayer")) chosenPlayer = tag.getUUID("ChosenPlayer");
+        if (tag.hasUUID("ChosenPlayer")) setChosenPlayer(tag.getUUID("ChosenPlayer"));
         lifetime = tag.getInt("Lifetime");
         relocations = tag.getInt("Relocations");
         whistled = tag.getBoolean("Whistled");
