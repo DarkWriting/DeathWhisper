@@ -17,6 +17,14 @@ public final class InvestigationCommands {
           }))
           .then(Commands.literal("manifest").requires(c->c.hasPermission(2)).executes(c->
               manager.forceManifest(c.getSource().getPlayerOrException())?1:0))
+          .then(Commands.literal("diagnose").requires(c->c.hasPermission(2)).executes(c->{
+              var player=c.getSource().getPlayerOrException();
+              c.getSource().sendSuccess(()->Component.literal(manager.diagnostics(player)),false);
+              return 1;
+          }))
+          .then(Commands.literal("test").requires(c->c.hasPermission(2))
+            .then(Commands.literal("footprints").executes(c->
+                manager.forceFootprints(c.getSource().getPlayerOrException())?1:0)))
           .then(Commands.literal("types").executes(c->{
               c.getSource().sendSuccess(()->Component.literal(
                 "Possible ghost profiles: "+java.util.Arrays.toString(GhostProfile.values())),false);
