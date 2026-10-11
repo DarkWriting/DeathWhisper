@@ -41,7 +41,7 @@ public final class StalkingManager {
         WatcherEntity w=watcherFor(p);
         return "Death Whisper: "+p.getName().getString()+" threat="+threat(p)+"/100"
            +", remaining="+cd+"s, watcher="+(w==null?"none":w.debugState())
-           +", current="+active.size()+", attempts="+attempted+", encounters="+successful;
+           +", current="+active.size()+", attempts="+attempted+", encounters="+successful+", requiresSurvival=true";
     }
     public String diagnostics(ServerPlayer p) {
         WatcherEntity w=watcherFor(p);
@@ -98,7 +98,7 @@ public final class StalkingManager {
             if(!level.getGameRules().getBoolean(WhisperRules.ENABLED)) continue;
             long cooldown=Mth.clamp(level.getGameRules().getInt(WhisperRules.COOLDOWN),10,7200)*20L;
             Long next=nextEncounter.get(p.getUUID());
-            if(next==null) {nextEncounter.put(p.getUUID(),ticks+cooldown/2);continue;}
+            if(next==null) {nextEncounter.put(p.getUUID(),ticks+Math.max(200,cooldown/4));continue;}
             if(ticks<next)continue;
             int chance=level.getGameRules().getInt(WhisperRules.CHANCE);
             if(level.getGameRules().getBoolean(WhisperRules.MEMORY)) chance+=threat(p)/3;
@@ -106,7 +106,7 @@ public final class StalkingManager {
             if(level.getGameRules().getBoolean(WhisperRules.GROUP_AVOIDANCE) && nearby>0) chance-=nearby*12;
             if(level.getGameRules().getBoolean(WhisperRules.ISOLATION) && nearby==0) chance+=level.getGameRules().getInt(WhisperRules.ISOLATION_BONUS);
             attempted++;
-            if(level.random.nextInt(100)<Mth.clamp(chance,0,100) && force(p)) {
+            if(level.random.nextInt(100)<Mth.clamp(chance,0,100) && force(p,chooseKind(level,p))) {
                 nextEncounter.put(p.getUUID(),ticks+cooldown+level.random.nextInt(20*90));
                 successful++;
             } else nextEncounter.put(p.getUUID(),ticks+200);
@@ -123,7 +123,7 @@ public final class StalkingManager {
         if(!(p.level() instanceof ServerLevel level) || !level.getGameRules().getBoolean(WhisperRules.ENABLED)) return false;
         int max=Mth.clamp(level.getGameRules().getInt(WhisperRules.MAX_ACTIVE),1,10);
         if(active.size()>=max || watcherFor(p)!=null) return false;
-        EncounterKind kind=requested==null?chooseKind(level,p):requested;
+        EncounterKind kind=requested==null?EncounterKind.WATCH:requested;
         BlockPos at=findPosition(level,p,28,kind);
         if(at==null) return false;
         WatcherEntity w=DeathWhisper.WATCHER.get().create(level);
@@ -140,6 +140,20 @@ public final class StalkingManager {
         active.put(p.getUUID(),w.getUUID());
         add(p,"encounters",1);
         setThreat(p,threat(p)+Mth.clamp(level.getGameRules().getInt(WhisperRules.THREAT_GAIN),0,100));
+        return true;
+    }
+    public boolean diagnostic(ServerPlayer p,String mode){
+        WatcherEntity watcher=watcherFor(p);
+        if(watcher==null && !force(p,EncounterKind.WATCH))return false;
+        watcher=watcherFor(p);
+        if(watcher==null)return false;
+        switch(mode.toLowerCase(java.util.Locale.ROOT)){
+            case "peek" -> watcher.debugPeek();
+            case "charge" -> watcher.debugCharge();
+            case "whistle" -> watcher.debugWhistle();
+            default -> {return false;}
+        }
+        p.sendSystemMessage(net.minecraft.network.chat.Component.literal("Diagnostic "+mode+" triggered: "+watcher.debugState()));
         return true;
     }
     public void record(ServerPlayer p,String event) {add(p,event,1);}
