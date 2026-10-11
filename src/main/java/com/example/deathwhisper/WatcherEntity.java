@@ -82,6 +82,12 @@ public final class WatcherEntity extends Zombie {
         entityData.set(PEEK_STYLE,1);entityData.set(PEEK_SIDE,1);
         entityData.set(PEEK_ACTIVE,1);
     }
+    /** OP-only real pathfinding check; returns false when no walkable route exists. */
+    public boolean debugStalk(ServerPlayer target){
+        if(!(level() instanceof ServerLevel serverLevel))return false;
+        getNavigation().stop();phase=0;
+        return stalkToward(serverLevel,target);
+    }
     public void debugCharge(){
         phase=0;getNavigation().stop();charging=true;chargeTicks=0;
         entityData.set(CLIENT_CHARGING,true);entityData.set(PEEK_ACTIVE,0);
@@ -200,7 +206,7 @@ public final class WatcherEntity extends Zombie {
             routeTimeout++;
             if (routeTimeout > 145) { getNavigation().stop(); phase = 0; coverSpot = null; entityData.set(PEEK_ACTIVE, 0); }
             else if (phase == 7) { // Follow the player's flank via real pathfinding.
-                if (seen || getNavigation().isDone() || distanceToSqr(target)<100 || routeTimeout>110) {
+                if ((seen && routeTimeout>35) || getNavigation().isDone() || distanceToSqr(target)<100 || routeTimeout>110) {
                     getNavigation().stop();phase=0;routeTimeout=0;
                 }
             }
