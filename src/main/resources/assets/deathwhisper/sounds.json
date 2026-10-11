@@ -1,1 +1,32 @@
-{"whistle":{"subtitle":"deathwhisper.subtitle.whistle","sounds":["deathwhisper:whistle"]}}
+{
+  "whistle": {
+    "sounds": [
+      "deathwhisper:whistle"
+    ]
+  },
+  "whistle_alt": {
+    "sounds": [
+      "deathwhisper:whistle_alt"
+    ]
+  },
+  "whistle_low": {
+    "sounds": [
+      "deathwhisper:whistle_low"
+    ]
+  },
+  "footsteps": {
+    "sounds": [
+      "deathwhisper:footsteps"
+    ]
+  },
+  "laughter": {
+    "sounds": [
+      "deathwhisper:laughter"
+    ]
+  },
+  "ambience": {
+    "sounds": [
+      "deathwhisper:ambience"
+    ]
+  }
+}
