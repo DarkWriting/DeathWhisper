@@ -1,19 +1,60 @@
 package com.example.deathwhisper;
-
 import net.minecraft.world.level.GameRules;
 
+/** World-save gamerules: /gamerule deathWhisper... */
 public final class WhisperRules {
-    private WhisperRules() {}
-    public static final GameRules.Key<GameRules.BooleanValue> ENABLED = GameRules.register("deathWhisperEnabled", GameRules.Category.MOBS, GameRules.BooleanValue.create(true));
-    public static final GameRules.Key<GameRules.BooleanValue> FAKE_CHARGES = GameRules.register("deathWhisperFakeCharges", GameRules.Category.MOBS, GameRules.BooleanValue.create(true));
-    public static final GameRules.Key<GameRules.BooleanValue> REPOSITION = GameRules.register("deathWhisperReposition", GameRules.Category.MOBS, GameRules.BooleanValue.create(true));
-    public static final GameRules.Key<GameRules.BooleanValue> UNDERGROUND = GameRules.register("deathWhisperUnderground", GameRules.Category.MOBS, GameRules.BooleanValue.create(true));
-    public static final GameRules.Key<GameRules.BooleanValue> NO_DAMAGE = GameRules.register("deathWhisperNoDamage", GameRules.Category.MOBS, GameRules.BooleanValue.create(true));
-    public static final GameRules.Key<GameRules.IntegerValue> COOLDOWN = GameRules.register("deathWhisperCooldown", GameRules.Category.MOBS, GameRules.IntegerValue.create(900));
-    public static final GameRules.Key<GameRules.IntegerValue> CHANCE = GameRules.register("deathWhisperChance", GameRules.Category.MOBS, GameRules.IntegerValue.create(30));
-    public static final GameRules.Key<GameRules.IntegerValue> MIN_DISTANCE = GameRules.register("deathWhisperMinDistance", GameRules.Category.MOBS, GameRules.IntegerValue.create(20));
-    public static final GameRules.Key<GameRules.IntegerValue> MAX_DISTANCE = GameRules.register("deathWhisperMaxDistance", GameRules.Category.MOBS, GameRules.IntegerValue.create(48));
-    public static final GameRules.Key<GameRules.IntegerValue> DURATION = GameRules.register("deathWhisperDuration", GameRules.Category.MOBS, GameRules.IntegerValue.create(25));
-    public static final GameRules.Key<GameRules.IntegerValue> CHARGE_CHANCE = GameRules.register("deathWhisperChargeChance", GameRules.Category.MOBS, GameRules.IntegerValue.create(15));
-    public static final GameRules.Key<GameRules.IntegerValue> THREAT_GAIN = GameRules.register("deathWhisperThreatGain", GameRules.Category.MOBS, GameRules.IntegerValue.create(10));
+    private WhisperRules(){}
+    private static GameRules.Key<GameRules.BooleanValue> bool(String n, boolean d) {
+        return GameRules.register("deathWhisper"+n, GameRules.Category.MOBS, GameRules.BooleanValue.create(d));
+    }
+    private static GameRules.Key<GameRules.IntegerValue> integer(String n, int d) {
+        return GameRules.register("deathWhisper"+n, GameRules.Category.MOBS, GameRules.IntegerValue.create(d));
+    }
+    public static final GameRules.Key<GameRules.BooleanValue> ENABLED = bool("Enabled", true);
+    public static final GameRules.Key<GameRules.BooleanValue> REPOSITION = bool("Reposition", true);
+    public static final GameRules.Key<GameRules.BooleanValue> FAKE_CHARGES = bool("FakeCharges", true);
+    public static final GameRules.Key<GameRules.BooleanValue> UNDERGROUND = bool("Underground", true);
+    public static final GameRules.Key<GameRules.BooleanValue> NO_DAMAGE = bool("NoDamage", true);
+    public static final GameRules.Key<GameRules.BooleanValue> STEALTH = bool("Stealth", true);
+    public static final GameRules.Key<GameRules.BooleanValue> PEEKING = bool("Peeking", true);
+    public static final GameRules.Key<GameRules.BooleanValue> PREDICTION = bool("Prediction", true);
+    public static final GameRules.Key<GameRules.BooleanValue> MEMORY = bool("Memory", true);
+    public static final GameRules.Key<GameRules.BooleanValue> BEHAVIOR_ADAPT = bool("BehaviorAdapt", true);
+    public static final GameRules.Key<GameRules.BooleanValue> ISOLATION = bool("Isolation", true);
+    public static final GameRules.Key<GameRules.BooleanValue> GROUP_AVOIDANCE = bool("GroupAvoidance", true);
+    public static final GameRules.Key<GameRules.BooleanValue> WEATHER = bool("Weather", true);
+    public static final GameRules.Key<GameRules.BooleanValue> BIOME_BEHAVIOR = bool("BiomeBehavior", true);
+    public static final GameRules.Key<GameRules.BooleanValue> STRUCTURE_BEHAVIOR = bool("StructureBehavior", true);
+    public static final GameRules.Key<GameRules.BooleanValue> ELEVATED_WATCH = bool("ElevatedWatch", true);
+    public static final GameRules.Key<GameRules.BooleanValue> SILENT_ENCOUNTERS = bool("SilentEncounters", true);
+    public static final GameRules.Key<GameRules.BooleanValue> FALSE_SIGHTINGS = bool("FalseSightings", true);
+    public static final GameRules.Key<GameRules.BooleanValue> FAKE_DEPARTURES = bool("FakeDepartures", true);
+    public static final GameRules.Key<GameRules.BooleanValue> DIRECTIONAL_AUDIO = bool("DirectionalAudio", true);
+    public static final GameRules.Key<GameRules.BooleanValue> FOOTSTEPS = bool("Footsteps", true);
+    public static final GameRules.Key<GameRules.BooleanValue> LAUGHTER = bool("Laughter", true);
+    public static final GameRules.Key<GameRules.BooleanValue> AMBIENCE = bool("Ambience", true);
+    public static final GameRules.Key<GameRules.BooleanValue> EYE_GLOW = bool("EyeGlow", true);
+    public static final GameRules.Key<GameRules.BooleanValue> PRIVATE_FOCUS = bool("PrivateFocus", true);
+    public static final GameRules.Key<GameRules.BooleanValue> DEBUG = bool("Debug", false);
+    public static final GameRules.Key<GameRules.IntegerValue> COOLDOWN = integer("Cooldown", 900);
+    public static final GameRules.Key<GameRules.IntegerValue> CHANCE = integer("Chance", 30);
+    public static final GameRules.Key<GameRules.IntegerValue> MIN_DISTANCE = integer("MinDistance", 20);
+    public static final GameRules.Key<GameRules.IntegerValue> MAX_DISTANCE = integer("MaxDistance", 48);
+    public static final GameRules.Key<GameRules.IntegerValue> DURATION = integer("Duration", 45);
+    public static final GameRules.Key<GameRules.IntegerValue> CHARGE_CHANCE = integer("ChargeChance", 10);
+    public static final GameRules.Key<GameRules.IntegerValue> THREAT_GAIN = integer("ThreatGain", 10);
+    public static final GameRules.Key<GameRules.IntegerValue> MAX_ACTIVE = integer("MaxActive", 2);
+    public static final GameRules.Key<GameRules.IntegerValue> PATH_BUDGET = integer("PathBudget", 10);
+    public static final GameRules.Key<GameRules.IntegerValue> RELOCATIONS = integer("Relocations", 4);
+    public static final GameRules.Key<GameRules.IntegerValue> PEEK_SECONDS = integer("PeekSeconds", 3);
+    public static final GameRules.Key<GameRules.IntegerValue> STARE_SECONDS = integer("StareSeconds", 5);
+    public static final GameRules.Key<GameRules.IntegerValue> SILENT_CHANCE = integer("SilentChance", 25);
+    public static final GameRules.Key<GameRules.IntegerValue> SIGHTING_CHANCE = integer("SightingChance", 15);
+    public static final GameRules.Key<GameRules.IntegerValue> FOOTSTEP_CHANCE = integer("FootstepChance", 25);
+    public static final GameRules.Key<GameRules.IntegerValue> WHISTLE_VOLUME = integer("WhistleVolume", 100);
+    public static final GameRules.Key<GameRules.IntegerValue> THREAT_DECAY = integer("ThreatDecay", 1);
+    public static final GameRules.Key<GameRules.IntegerValue> ISOLATION_BONUS = integer("IsolationBonus", 15);
+    public static final GameRules.Key<GameRules.IntegerValue> GROUP_RADIUS = integer("GroupRadius", 30);
+    public static final GameRules.Key<GameRules.IntegerValue> MIN_PATH_DISTANCE = integer("MinPathDistance", 6);
+    public static final GameRules.Key<GameRules.IntegerValue> MAX_PATH_DISTANCE = integer("MaxPathDistance", 22);
 }
