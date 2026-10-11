@@ -107,6 +107,7 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.BooleanValue> HAUNTED_PAINTINGS=bool("HauntedPaintings",true);
     public static final GameRules.Key<GameRules.BooleanValue> FOOTPRINTS_ENABLED=bool("UnexplainedFootprints",true);
     public static final GameRules.Key<GameRules.IntegerValue> SEANCE_SECONDS=integer("SeanceSeconds",14);
+    public static final GameRules.Key<GameRules.IntegerValue> SEANCE_MIN_PLAYERS=integer("SeanceMinPlayers",2);
     public static final GameRules.Key<GameRules.IntegerValue> INVESTIGATION_RANGE=integer("InvestigationRange",24);
     public static final GameRules.Key<GameRules.IntegerValue> FOOTPRINT_INTERVAL=integer("FootprintInterval",240);
     public static final GameRules.Key<GameRules.IntegerValue> FOOTPRINT_CHANCE=integer("FootprintChance",30);
