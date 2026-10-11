@@ -2,6 +2,10 @@ package com.example.deathwhisper;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.neoforged.neoforge.registries.DeferredBlock;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraft.resources.ResourceLocation;
@@ -23,6 +27,12 @@ public final class DeathWhisper {
     public static final PowerFramework FRAMEWORK = new PowerFramework(POWERS);
     public static final InvestigationManager INVESTIGATIONS = new InvestigationManager();
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(ID);
+    private static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(ID);
+    public static final DeferredBlock<MotionSensorBlock> MOTION_SENSOR_BLOCK = BLOCKS.registerBlock(
+        "motion_sensor",MotionSensorBlock::new,
+        BlockBehaviour.Properties.of().strength(1.4f).sound(SoundType.METAL).noOcclusion());
+    public static final net.neoforged.neoforge.registries.DeferredItem<BlockItem> MOTION_SENSOR_ITEM=
+        ITEMS.registerSimpleBlockItem(MOTION_SENSOR_BLOCK);
     public static final net.neoforged.neoforge.registries.DeferredItem<ChainPuzzleBox> CHAIN_BOX =
         ITEMS.registerItem("chain_puzzle_box",ChainPuzzleBox::new,new Item.Properties().stacksTo(1));
     public static final net.neoforged.neoforge.registries.DeferredItem<BlightSerum> RUSH_SERUM =
@@ -55,11 +65,21 @@ public final class DeathWhisper {
     public static final net.neoforged.neoforge.registries.DeferredItem<InvestigationItem> UV_LAMP =
         ITEMS.registerItem("uv_lamp",p->new InvestigationItem(p,InvestigationItem.Tool.UV),new Item.Properties().stacksTo(1));
 
+    public static final net.neoforged.neoforge.registries.DeferredItem<CursedRecorder> CURSED_RECORDER=
+        ITEMS.registerItem("cursed_recorder",CursedRecorder::new,new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<CursedTape> CURSED_TAPE=
+        ITEMS.registerItem("cursed_tape",CursedTape::new,new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<GhostHuntKit> HUNT_KIT=
+        ITEMS.registerItem("ghost_hunt_kit",GhostHuntKit::new,new Item.Properties().stacksTo(1));
     private static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, ID);
     private static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, ID);
     public static final DeferredHolder<EntityType<?>, EntityType<WatcherEntity>> WATCHER = ENTITIES.register("watcher", () ->
         EntityType.Builder.<WatcherEntity>of(WatcherEntity::new, MobCategory.MISC)
             .sized(0.65f, 1.95f).clientTrackingRange(80).updateInterval(2).build("deathwhisper:watcher"));
+    public static final DeferredHolder<EntityType<?>, EntityType<GhostApparition>> GHOST_APPARITION=
+        ENTITIES.register("ghost_apparition",()->EntityType.Builder.<GhostApparition>of(
+            GhostApparition::new,MobCategory.MISC).sized(.65f,1.95f)
+            .clientTrackingRange(48).updateInterval(2).build("deathwhisper:ghost_apparition"));
     private static DeferredHolder<SoundEvent,SoundEvent> sound(String name) {
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ID,name)));
     }
@@ -85,16 +105,22 @@ public final class DeathWhisper {
             event.accept(SPIRIT_RADIO.get());
             event.accept(GHOST_THERMOMETER.get());
             event.accept(UV_LAMP.get());
+            event.accept(MOTION_SENSOR_ITEM.get());
+            event.accept(CURSED_RECORDER.get());
+            event.accept(CURSED_TAPE.get());
+            event.accept(HUNT_KIT.get());
         }
     }
     private void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(WATCHER.get(), Zombie.createAttributes().build());
+        event.put(GHOST_APPARITION.get(),Zombie.createAttributes().build());
     }
 
     public DeathWhisper(IEventBus modBus) {
         // Force gamerule registration before the vanilla gamerule registry is frozen.
         WhisperRules.ENABLED.toString();
         ENTITIES.register(modBus);
+        BLOCKS.register(modBus);
         ITEMS.register(modBus);
         modBus.addListener(this::addCreativeItems);
         SOUNDS.register(modBus);
