@@ -30,13 +30,17 @@ public final class LivingHarpoonPower implements SupernaturalAbility {
         }
         int distance=Mth.clamp(level.getGameRules().getInt(WhisperRules.HARPOON_RANGE),6,32);
         Vec3 eye=owner.getEyePosition(),forward=owner.getLookAngle();
+        Vec3 rayEnd=eye.add(forward.scale(distance));
         ServerPlayer best=null;
         double nearest=distance*distance;
         for(ServerPlayer other:level.players()){
             if(other==owner||!other.isAlive()||other.isSpectator()||other.isCreative())continue;
-            double d=eye.distanceToSqr(other.getEyePosition());
-            if(d>nearest||d<1||!owner.hasLineOfSight(other))continue;
-            if(other.getEyePosition().subtract(eye).normalize().dot(forward)<.975)continue;
+            // Ray against the PLAYER hitbox, not only the center of their head.
+            // No other entity category can be hooked.
+            var hit=other.getBoundingBox().inflate(.20).clip(eye,rayEnd);
+            if(hit.isEmpty() || !owner.hasLineOfSight(other))continue;
+            double d=hit.get().distanceToSqr(eye);
+            if(d>nearest || d<1)continue;
             nearest=d;best=other;
         }
         if(best==null) {
@@ -66,9 +70,15 @@ public final class LivingHarpoonPower implements SupernaturalAbility {
                 || !level.getGameRules().getBoolean(WhisperRules.POWERS_ENABLED))return true;
             double max=Mth.clamp(level.getGameRules().getInt(WhisperRules.HARPOON_RANGE),6,32);
             double d=owner.distanceToSqr(victim);
-            if(d>max*max||!owner.hasLineOfSight(victim))return true;
+            if(d>max*max || !owner.hasLineOfSight(victim)) {
+                owner.displayClientMessage(Component.literal("Harpoon tether broken."),true);
+                return true;
+            }
             Vec3 diff=owner.getEyePosition().subtract(victim.getEyePosition());
-            if(diff.length()<2.8)return true;
+            if(diff.length()<2.8) {
+                owner.displayClientMessage(Component.literal("Harpoon target reeled in."),true);
+                return true;
+            }
             double pull=Mth.clamp(level.getGameRules().getInt(WhisperRules.HARPOON_PULL),5,90)/100.0;
             // Pull toward the owner without dealing damage or teleporting.
             Vec3 v=diff.normalize().scale(pull);
