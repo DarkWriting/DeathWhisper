@@ -297,3 +297,25 @@ Repeatable OP movement check on relatively level ground with Death at least 15 b
     /deathwhisper debug
 
 The debug output includes whether Death's navigation is active and how many path searches failed. Test in Survival mode, ideally with a tree or obstacle nearby; open terrain has fewer hiding opportunities. Stalking and UV must still be validated in-game despite a successful CI build.
+
+
+## v0.8.3 — Blight-style rush: wall chaining, acceleration, fatigue
+
+Right-click the serum to rush. **A new rush is only available after actually colliding with a wall**. You have a short rebound window to re-aim and right-click again. Every successive rush is faster. If a rush ends in open space without striking a wall, the whole chain stops and you become fatigued (Slowness III and Weakness I for a short time). Letting the rebound window expire also causes fatigue, as does completing your final wall rebound.
+
+Default settings: five rushes, base speed 1.15 blocks/tick, with +0.18 blocks/tick per successful chained rush (1.15 → 1.33 → 1.51 → 1.69 → 1.87). This is a server-authoritative approximation of the wall rebound power, not a polished custom movement animation.
+
+```mcfunction
+/give @s deathwhisper:blight_serum
+/gamerule deathWhisperRushCharges 5
+/gamerule deathWhisperRushSpeed 115
+/gamerule deathWhisperRushAcceleration 18
+/gamerule deathWhisperRushFatigueTicks 35
+/gamerule deathWhisperRushReboundTicks 36
+/gamerule deathWhisperRushTicks 12
+/gamerule deathWhisperRushCooldown 30
+```
+
+**Testing:** Rush across flat ground without a wall; wait for the dash to finish, confirm Slowness and Weakness are applied and further rushes are blocked by the normal cooldown. Then test against a solid wall: bump the wall, re-aim, rush again within 1.8 seconds, and repeat. Chat should show an increased speed on every successful chain. Confirm the third, fourth and fifth rush work, and that collisions never teleport through protected structures. Client speed and particle effects require actual gameplay testing.
+
+Other DBD-style tuning included: the Shrouded Mask mark checks actual target hitboxes (not just the eye position); the player-only Living Harpoon selects its target by ray intersection with player hitboxes; the Security Door Controller supports `/deathwhispersecurity unlink <number>` for stale door links. Door travel remains disabled by default until claims protection can be validated.
