@@ -13,5 +13,11 @@
   "item.deathwhisper.emf_reader": "EMF Detector",
   "item.deathwhisper.spirit_radio": "Spirit Radio",
   "item.deathwhisper.ghost_thermometer": "Ghost Thermometer",
-  "item.deathwhisper.uv_lamp": "Ultraviolet Investigation Lamp"
+  "item.deathwhisper.uv_lamp": "Ultraviolet Investigation Lamp",
+  "entity.deathwhisper.ghost_apparition": "Spectral Apparition",
+  "block.deathwhisper.motion_sensor": "Paranormal Motion Sensor",
+  "item.deathwhisper.motion_sensor": "Paranormal Motion Sensor",
+  "item.deathwhisper.cursed_recorder": "Cursed Tape Recorder",
+  "item.deathwhisper.cursed_tape": "Cursed Recording",
+  "item.deathwhisper.ghost_hunt_kit": "Ghost Hunt Equipment Kit"
 }

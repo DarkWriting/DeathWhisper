@@ -20,6 +20,7 @@ jobs:
           python3 scripts/generate_assets.py
           python3 scripts/generate_power_assets.py
           python3 scripts/generate_investigation_assets.py
+          python3 scripts/generate_haunt_assets.py
           mkdir -p src/main/resources/assets/deathwhisper/sounds
           for f in build/*.wav; do
             name="$(basename "$f" .wav)"

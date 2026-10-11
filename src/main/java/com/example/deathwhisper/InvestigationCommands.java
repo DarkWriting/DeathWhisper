@@ -15,6 +15,8 @@ public final class InvestigationCommands {
           .then(Commands.literal("journal").executes(c->{
               return manager.showJournal(c.getSource().getPlayerOrException())?1:0;
           }))
+          .then(Commands.literal("manifest").requires(c->c.hasPermission(2)).executes(c->
+              manager.forceManifest(c.getSource().getPlayerOrException())?1:0))
           .then(Commands.literal("types").executes(c->{
               c.getSource().sendSuccess(()->Component.literal(
                 "Possible ghost profiles: "+java.util.Arrays.toString(GhostProfile.values())),false);
