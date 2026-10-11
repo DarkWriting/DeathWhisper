@@ -127,6 +127,10 @@ public final class SecurityDoorController extends Item {
     public static int travel(ServerPlayer p,int index) {
         if(!holding(p)||!p.level().getGameRules().getBoolean(WhisperRules.SECURITY_ENABLED))return 0;
         ListTag saved=list(p);
+        if(!p.level().getGameRules().getBoolean(WhisperRules.SECURITY_TRAVEL)){
+            p.sendSystemMessage(Component.literal("Security travel disabled. Enable deathWhisperSecurityTravel after verifying protected claims."));
+            return 0;
+        }
         if(saved.size()<2||index<1||index>saved.size())return 0;
         String dimension=p.level().dimension().location().toString();
         boolean near=false;
