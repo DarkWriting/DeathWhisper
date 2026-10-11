@@ -16,6 +16,7 @@ jobs:
           java-version: '21'
       - name: Generate original texture and whistle assets
         run: |
+          sudo apt-get update -qq && sudo apt-get install -y ffmpeg
           python3 scripts/generate_assets.py
           ffmpeg -loglevel error -y -i build/whistle.wav -c:a libvorbis -q:a 4 src/main/resources/assets/deathwhisper/sounds/whistle.ogg
       - name: Get Gradle wrapper from NeoForge MDK
