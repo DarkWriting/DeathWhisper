@@ -36,12 +36,12 @@ public final class WatcherEntity extends Zombie {
         var toward = position().subtract(player.getEyePosition()).normalize();
         return player.getLookAngle().dot(toward) > 0.93;
     }
-    @Override protected void addAdditionalSaveData(CompoundTag tag) {
+    @Override public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         if (chosenPlayer != null) tag.putUUID("ChosenPlayer", chosenPlayer);
         tag.putInt("Lifetime", lifetime);
     }
-    @Override protected void readAdditionalSaveData(CompoundTag tag) {
+    @Override public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         if (tag.hasUUID("ChosenPlayer")) chosenPlayer = tag.getUUID("ChosenPlayer");
         lifetime = tag.getInt("Lifetime");
