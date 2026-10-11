@@ -179,6 +179,11 @@ public final class StalkingManager {
         return findPosition(level,p,attempts,EncounterKind.WATCH);
     }
     public static BlockPos findPosition(ServerLevel level,ServerPlayer p,int attempts,EncounterKind kind) {
+        if(level.getGameRules().getBoolean(WhisperRules.STRUCTURE_BEHAVIOR)
+             && (kind==EncounterKind.HOME || kind==EncounterKind.CAMPFIRE || kind==EncounterKind.DOORWAY)) {
+            BlockPos scripted=nearStructure(level,p,kind);
+            if(scripted!=null)return scripted;
+        }
         int min=Mth.clamp(level.getGameRules().getInt(WhisperRules.MIN_DISTANCE),10,64);
         int max=Mth.clamp(level.getGameRules().getInt(WhisperRules.MAX_DISTANCE),min+1,96);
         Vec3 ahead=level.getGameRules().getBoolean(WhisperRules.PREDICTION)?p.getDeltaMovement().scale(15):Vec3.ZERO;
@@ -194,7 +199,37 @@ public final class StalkingManager {
                 if(!level.getGameRules().getBoolean(WhisperRules.UNDERGROUND)&&!level.canSeeSky(at))continue;
                 if(level.getGameRules().getBoolean(WhisperRules.ELEVATED_WATCH) && kind==EncounterKind.HILL
                      && at.getY()<p.getBlockY()+3)continue;
+                if(level.getGameRules().getBoolean(WhisperRules.STEALTH)) {
+                    Vec3 fromPlayer=Vec3.atCenterOf(at).subtract(p.getEyePosition()).normalize();
+                    double facing=fromPlayer.dot(p.getLookAngle());
+                    // Peripheral figures should sit at the edge of the player's actual camera direction.
+                    if(kind==EncounterKind.PERIPHERAL && Math.abs(facing)>.48)continue;
+                    if(kind==EncounterKind.SHADOW && facing>-.15)continue;
+                    // Shadows prefer lower light; never forbid a valid day encounter outright.
+                    if((kind==EncounterKind.SHADOW || kind==EncounterKind.SILENT)
+                        && level.getMaxLocalRawBrightness(at)>11 && i<attempts-6)continue;
+                }
                 return at;
+            }
+        }
+        return null;
+    }
+    /** Prefer real doors, beds or campfires before falling back to terrain sightings. */
+    private static BlockPos nearStructure(ServerLevel level,ServerPlayer p,EncounterKind kind) {
+        BlockPos origin=p.blockPosition();
+        for(int dx=-12;dx<=12;dx+=2)for(int dz=-12;dz<=12;dz+=2)for(int dy=-3;dy<=3;dy++) {
+            BlockPos b=origin.offset(dx,dy,dz);
+            if(!level.hasChunkAt(b))continue;
+            var block=level.getBlockState(b).getBlock();
+            boolean right=(kind==EncounterKind.DOORWAY && block instanceof DoorBlock)
+                ||(kind==EncounterKind.HOME && block instanceof BedBlock)
+                ||(kind==EncounterKind.CAMPFIRE && (block==Blocks.CAMPFIRE || block==Blocks.SOUL_CAMPFIRE));
+            if(!right)continue;
+            for(var side:net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                BlockPos stand=b.relative(side,2);
+                if(stand.distSqr(origin)<64 || !level.hasChunkAt(stand))continue;
+                if(level.getBlockState(stand).isAir() && level.getBlockState(stand.above()).isAir()
+                    && level.getBlockState(stand.below()).isSolidRender(level,stand.below()))return stand;
             }
         }
         return null;
