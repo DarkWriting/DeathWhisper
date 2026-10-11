@@ -204,7 +204,15 @@ public final class InvestigationManager {
             return false;
         }
         int duration=Mth.clamp(level.getGameRules().getInt(WhisperRules.HUNT_SECONDS),20,180);
-        hunts.put(id,new GhostHunt(site,team,ticks,duration));
+        GhostHunt newHunt=new GhostHunt(site,team,ticks,duration);
+        // Players may already have collected case evidence before starting a formal hunt.
+        // Credit their journal discoveries instead of requiring them to discover the same clue again.
+        for(UUID member:team){
+            ServerPlayer investigator=caller.getServer().getPlayerList().getPlayer(member);
+            if(investigator!=null)
+                newHunt.clues |= cases(investigator).getCompound(id).getInt("evidence");
+        }
+        hunts.put(id,newHunt);
         site.lastActive=ticks;
         for(UUID idPlayer:team){
             ServerPlayer member=caller.getServer().getPlayerList().getPlayer(idPlayer);
@@ -454,6 +462,9 @@ public final class InvestigationManager {
         }
         p.sendSystemMessage(Component.literal("§5[Seance] §7Circle joined: "+ritual.members.size()+" investigators. Remain within eight blocks."));
         int required=Mth.clamp(level.getGameRules().getInt(WhisperRules.SEANCE_MIN_PLAYERS),1,4);
+        if(ritual.members.size()<required)
+            p.sendSystemMessage(Component.literal("§7[Seance] Waiting for "+(required-ritual.members.size())+
+                " more investigator(s). Both must use ritual chalk within four blocks of this circle."));
         if(ritual.members.size()>=required && ritual.finishing<0){
             int seconds=Mth.clamp(level.getGameRules().getInt(WhisperRules.SEANCE_SECONDS),5,45);
             ritual.finishing=ticks+20L*seconds;
