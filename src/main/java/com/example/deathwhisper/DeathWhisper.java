@@ -52,6 +52,9 @@ public final class DeathWhisper {
     public static final net.neoforged.neoforge.registries.DeferredItem<InvestigationItem> GHOST_THERMOMETER =
         ITEMS.registerItem("ghost_thermometer",p->new InvestigationItem(p,InvestigationItem.Tool.THERMOMETER),new Item.Properties().stacksTo(1));
 
+    public static final net.neoforged.neoforge.registries.DeferredItem<InvestigationItem> UV_LAMP =
+        ITEMS.registerItem("uv_lamp",p->new InvestigationItem(p,InvestigationItem.Tool.UV),new Item.Properties().stacksTo(1));
+
     private static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, ID);
     private static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, ID);
     public static final DeferredHolder<EntityType<?>, EntityType<WatcherEntity>> WATCHER = ENTITIES.register("watcher", () ->
@@ -81,6 +84,7 @@ public final class DeathWhisper {
             event.accept(EMF_READER.get());
             event.accept(SPIRIT_RADIO.get());
             event.accept(GHOST_THERMOMETER.get());
+            event.accept(UV_LAMP.get());
         }
     }
     private void registerAttributes(EntityAttributeCreationEvent event) {
