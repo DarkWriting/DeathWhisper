@@ -69,6 +69,9 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.IntegerValue> RUSH_TICKS = integer("RushTicks", 12);
     public static final GameRules.Key<GameRules.IntegerValue> RUSH_WINDOW = integer("RushWindow", 25);
     public static final GameRules.Key<GameRules.IntegerValue> RUSH_COOLDOWN = integer("RushCooldown", 30);
+    public static final GameRules.Key<GameRules.IntegerValue> RUSH_ACCELERATION = integer("RushAcceleration", 18);
+    public static final GameRules.Key<GameRules.IntegerValue> RUSH_FATIGUE_TICKS = integer("RushFatigueTicks", 35);
+    public static final GameRules.Key<GameRules.IntegerValue> RUSH_REBOUND_TICKS = integer("RushReboundTicks", 36);
 
 
     // Ghost Face-inspired, original stealth-and-mark power.
