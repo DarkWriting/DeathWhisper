@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 /** Instruments all delegate to one per-world investigation director. No terrain edits. */
 public final class InvestigationItem extends Item {
-    public enum Tool { CHALK, JOURNAL, EMF, SPIRIT_RADIO, THERMOMETER }
+    public enum Tool { CHALK, JOURNAL, EMF, SPIRIT_RADIO, THERMOMETER, UV }
     private final Tool tool;
     public InvestigationItem(Properties properties,Tool tool){super(properties);this.tool=tool;}
     @Override public InteractionResult useOn(UseOnContext context){
