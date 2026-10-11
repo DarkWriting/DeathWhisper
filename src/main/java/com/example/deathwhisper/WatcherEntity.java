@@ -22,6 +22,17 @@ public final class WatcherEntity extends Zombie {
         super.tick();
         if (level().isClientSide) return;
         lifetime++;
+        // Vanilla /summon provides no target. Assign the nearest eligible player.
+        if (chosenPlayer == null) {
+            ServerPlayer nearest = null;
+            double best = 80.0 * 80.0;
+            for (ServerPlayer player : level().getServer().getPlayerList().getPlayers()) {
+                if (player.level() != level() || player.isSpectator() || !player.isAlive()) continue;
+                double dist = distanceToSqr(player);
+                if (dist < best) { best = dist; nearest = player; }
+            }
+            if (nearest != null) chosenPlayer = nearest.getUUID();
+        }
         ServerPlayer target = chosenPlayer == null ? null : level().getServer().getPlayerList().getPlayer(chosenPlayer);
         if (target == null || target.level() != level() || target.isSpectator() || lifetime > 320) { discard(); return; }
         getLookControl().setLookAt(target, 30f, 30f);
