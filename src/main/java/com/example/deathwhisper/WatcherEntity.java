@@ -50,7 +50,8 @@ public final class WatcherEntity extends Zombie {
     @Override protected boolean isSunSensitive() { return false; }
     @Override public boolean doHurtTarget(net.minecraft.world.entity.Entity entity) { return false; }
     @Override protected void registerGoals() { }
-    public void setChosenPlayer(UUID id) { chosenPlayer = id; entityData.set(TARGET_SKIN, id.toString()); }
+    public void setChosenPlayer(UUID id) { chosenPlayer = id; entityData.set(TARGET_SKIN, id == null ? "" : id.toString()); }
+    public UUID getSkinTarget() { return skinTarget(); }
     public UUID skinTarget() { try { return UUID.fromString(entityData.get(TARGET_SKIN)); } catch(Exception e) { return null; } }
     public UUID getChosenPlayer() { return chosenPlayer; }
     public void setEncounterKind(EncounterKind kind) {
