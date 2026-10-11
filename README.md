@@ -117,3 +117,23 @@ The existing Puzzle Box and Blight Serum now use the same framework.
 PvP targeting for supernatural abilities is **disabled by default**. The new items
 are intentionally not given survival crafting recipes yet: balance/progression will be
 set after the abilities have been tested. No third-party model or sound assets are used.
+
+## Experimental v0.6: Living Harpoon, Slasher's Relic, Security Door Controller
+
+### Test items
+/give @s deathwhisper:living_harpoon
+/give @s deathwhisper:slasher_relic
+/give @s deathwhisper:security_door_controller
+
+### Living Harpoon
+Right-click while aiming directly at another player. The tether pulls them toward you for a limited time, with no direct damage. **It never targets mobs or Pokemon.** Enable the opt-in gamerule first: /gamerule deathWhisperHarpoonPvp true. This is independent of the general PvP setting. Other gamerules: HarpoonRange 20, HarpoonCooldown 16 seconds, HarpoonSeconds 3, HarpoonPull 24. All begin with the deathWhisper prefix.
+
+### Slasher's Relic
+Right-click for temporary invisibility and speed. Tracks nearby living mobs as private spectral footprints; tracking other players is OFF unless /gamerule deathWhisperSlasherTrackPlayers true. Right-click again after 0.6 seconds to lunge, breaking invisibility; this second activation shares the first cooldown. Other gamerules: SlasherCooldown 26 seconds, SlasherSeconds 12, SlasherTrackRange 28, SlasherLungeSpeed 140. No contact damage.
+
+### Security Door Controller
+Sneak + right-click TWO existing iron doors to register them for your player. Right-click air to open a clickable chat-based access panel with SCAN and TRAVEL links. Scans show a status snapshot (open/closed, players and monsters) of a loaded iron door, *not a live video feed*. Travel requires the source within five blocks of one of your registered doors and a safe loaded destination in the SAME dimension. No chunks or doors are created by this item. Commands while holding the item: /deathwhispersecurity list, /deathwhispersecurity scan 1, /deathwhispersecurity travel 2. Gamerules: deathWhisperSecurityEnabled true, deathWhisperSecurityMaxDoors 8, deathWhisperSecurityScanRadius 8.
+
+**Caution:** The security system does NOT currently integrate Open Parties and Claims protection checks; movement between registered doors may bypass claim access restrictions. Test with trusted players, and do not enable on a public production server until claim integration and multiplayer tests have been completed.
+
+These features have GitHub compilation tests, not automated in-world integration tests.
