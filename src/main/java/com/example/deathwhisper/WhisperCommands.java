@@ -62,6 +62,15 @@ public final class WhisperCommands {
               c.getSource().sendSuccess(() -> Component.literal(manager.memory(p)),false);
               return 1;
           }))
+          .then(Commands.literal("powers").executes(c->{
+              ServerPlayer p=c.getSource().getPlayerOrException();
+              c.getSource().sendSuccess(()->Component.literal(DeathWhisper.FRAMEWORK.status(p)),false);
+              return 1;
+          }).then(Commands.argument("player",EntityArgument.player()).executes(c->{
+              ServerPlayer p=EntityArgument.getPlayer(c,"player");
+              c.getSource().sendSuccess(()->Component.literal(DeathWhisper.FRAMEWORK.status(p)),false);
+              return 1;
+          })))
           .then(Commands.literal("status").executes(c -> {
               ServerPlayer p = c.getSource().getPlayerOrException();
               c.getSource().sendSuccess(() -> Component.literal(manager.status(p)), false);

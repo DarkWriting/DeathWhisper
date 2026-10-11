@@ -2,5 +2,7 @@
   "entity.deathwhisper.watcher": "The Watcher",
   "item.deathwhisper.watcher_spawn_egg": "Watcher Spawn Egg",
   "item.deathwhisper.chain_puzzle_box": "Chain Puzzle Box",
-  "item.deathwhisper.blight_serum": "Blight Serum"
+  "item.deathwhisper.blight_serum": "Blight Serum",
+  "item.deathwhisper.shrouded_mask": "Shrouded Mask",
+  "item.deathwhisper.ink_feather": "Ink-Stained Feather"
 }

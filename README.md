@@ -65,3 +65,55 @@ The encounter director uses bounded pathfinding, no chunk loading, per-player co
 
 ## Developer build
 Java 21, NeoForge 21.1.250, Gradle ModDevGradle. GitHub Actions generates original audio/PNG assets, builds, and publishes a JAR artifact. Source is under `src/main/java/com/example/deathwhisper`.
+
+## Supernatural powers framework — experimental v0.5.0
+
+All active abilities implement `SupernaturalAbility` and are dispatched via `PowerFramework`.
+The common framework handles server-only activation, cooldowns, PvP-safe targeting,
+periodic ticks and a pre-damage hook. New powers register an ability ID with the framework,
+then use a `PowerItem` which delegates its right-click action to that ability.
+The existing Puzzle Box and Blight Serum now use the same framework.
+
+**Creative-mode test items or OP /give commands:**
+
+```mcfunction
+/give @s deathwhisper:chain_puzzle_box
+/give @s deathwhisper:blight_serum
+/give @s deathwhisper:shrouded_mask
+/give @s deathwhisper:ink_feather
+/deathwhisper powers
+```
+
+- **Shrouded Mask (Ghost Face-inspired):** Right-click to enter temporary invisibility.
+  While holding the mask, stare directly at one eligible mob for long enough to mark it.
+  A mark highlights it and grants **only the mask user** bonus damage when attacking
+  that marked target before the mark expires. Armor and held items may remain visible.
+- **Ink-Stained Feather (Artist-inspired):** Right-click to launch three supernatural
+  ink wisps. Their smoke-wing silhouettes move forward, bend toward nearby living
+  enemies, and reveal any targets struck with Glowing. They are visual particles and
+  server-side flight records, not persistent new mobs.
+- **Puzzle Box:** Right-click toward a nearby living target to restrain it with chains.
+- **Blight Serum:** Right-click to rush; use again within the charging window for
+  follow-up bursts; wall collisions cause a rebound interruption.
+
+**Gamerules:**
+
+```mcfunction
+/gamerule deathWhisperPowersEnabled true
+/gamerule deathWhisperPowersPvp false
+/gamerule deathWhisperGhostCooldown 30
+/gamerule deathWhisperGhostShroudSeconds 14
+/gamerule deathWhisperGhostMarkTicks 44
+/gamerule deathWhisperGhostMarkSeconds 12
+/gamerule deathWhisperGhostRange 22
+/gamerule deathWhisperGhostDamageBonus 35
+/gamerule deathWhisperCrowCooldown 16
+/gamerule deathWhisperCrowCount 3
+/gamerule deathWhisperCrowRange 28
+/gamerule deathWhisperCrowRevealSeconds 9
+/gamerule deathWhisperCrowSpeed 105
+```
+
+PvP targeting for supernatural abilities is **disabled by default**. The new items
+are intentionally not given survival crafting recipes yet: balance/progression will be
+set after the abilities have been tested. No third-party model or sound assets are used.

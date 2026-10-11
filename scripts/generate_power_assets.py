@@ -11,7 +11,7 @@ def write(name,pixels):
     png=b"\x89PNG\r\n\x1a\n"+part(b"IHDR",struct.pack(">IIBBBBB",w,h,8,6,0,0,0))
     png+=part(b"IDAT",zlib.compress(raw,9))+part(b"IEND",b"")
     (out/(name+".png")).write_bytes(png)
-for name in ("chain_puzzle_box","blight_serum"):
+for name in ("chain_puzzle_box","blight_serum","shrouded_mask","ink_feather"):
     p=[[(0,0,0,0) for x in range(32)] for y in range(32)]
     def px(x,y,c):
         if 0<=x<32 and 0<=y<32:p[y][x]=c
@@ -33,7 +33,7 @@ for name in ("chain_puzzle_box","blight_serum"):
         for x in range(13,19):
             for y in range(13,19):px(x,y,(89,33,115,255))
         for x,y in ((15,14),(16,14),(15,17),(16,17)):px(x,y,(239,178,253,255))
-    else:
+    elif name=="blight_serum":
         # Bright, eerie violet serum inside an amber vial with a silver stopper.
         for y in range(3,7):
             for x in range(12,20):px(x,y,(179,188,199,255))
@@ -46,5 +46,32 @@ for name in ("chain_puzzle_box","blight_serum"):
                 px(x,y,(145,169,177,255) if edge else (150,29+3*(x%5),194,255))
         for x,y in ((12,13),(15,16),(19,19),(13,23),(20,14),(17,24)):
             px(x,y,(243,181,255,255))
+    elif name=="shrouded_mask":
+        # Original stitched shadow hood; white elongated mask with crimson eyes.
+        for y in range(3,30):
+            for x in range(5,27):
+                if (x-15.5)**2/140+(y-15.0)**2/205<1:
+                    px(x,y,(25,24,39,255) if x in (5,6,25,26) else (42,43,59,255))
+        for y in range(7,27):
+            for x in range(10,22):
+                if (x-15.5)**2/39+(y-16)**2/115<1:
+                    px(x,y,(213,213,208,255) if x>11 and x<20 else (126,126,146,255))
+        for y in range(13,16):
+            for x in (12,13,18,19): px(x,y,(168,21,48,255))
+        for x in (15,16):
+            for y in (18,19,20):px(x,y,(27,26,43,255))
+    elif name=="ink_feather":
+        # Ink-black feather and violet supernatural glow.
+        for y in range(4,29):
+            center=24-y*.42
+            spread=max(1, int(7*(1-abs(y-16)/17)))
+            for x in range(max(2,int(center-spread)),min(30,int(center+spread))):
+                px(x,y,(31,28,55,255) if (x+y)%4 else (74,45,104,255))
+            if 0<=int(center)<32:px(int(center),y,(171,126,209,255))
+        for i in range(10,26):
+            x=int(24-i*.42)
+            px(x,i,(193,163,217,255))
+        for x,y in ((6,8),(25,5),(9,24),(24,24),(18,3)):
+            px(x,y,(206,89,243,255))
     write(name,p)
 print("Created power item icons.")
