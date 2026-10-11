@@ -213,16 +213,27 @@ public final class StalkingManager {
             min=Mth.clamp(min+7,10,86);
             max=Mth.clamp(max+7,min+1,96);
         }
-        Vec3 ahead=level.getGameRules().getBoolean(WhisperRules.PREDICTION)?p.getDeltaMovement().scale(15):Vec3.ZERO;
+        // Small predicted offset, never a large shift that effectively extends max distance.
+        Vec3 ahead=level.getGameRules().getBoolean(WhisperRules.PREDICTION)
+            ? p.getDeltaMovement().scale(5):Vec3.ZERO;
         for(int i=0;i<Math.min(attempts,48);i++){
             double angle=level.random.nextDouble()*Math.PI*2;
-            int dist=min+level.random.nextInt(max-min+1);
+            // Bias encounters toward the NEAR end of the configured range;
+            // previously a uniform 20-48 block roll often placed Death beyond normal sight.
+            // The final few retries can still use the full distance range for difficult terrain.
+            int nearCap=Math.min(max,min+12);
+            int dist=(i < Math.max(4,attempts-7))
+                ? min+level.random.nextInt(nearCap-min+1)
+                : min+level.random.nextInt(max-min+1);
             int x=Mth.floor(p.getX()+Math.cos(angle)*dist+ahead.x);
             int z=Mth.floor(p.getZ()+Math.sin(angle)*dist+ahead.z);
             for(int dy=-7;dy<=7;dy++){
                 BlockPos at=new BlockPos(x,p.blockPosition().getY()+dy,z);
-                if(!level.hasChunkAt(at)||!level.getBlockState(at.below()).isSolidRender(level,at.below()))continue;
+                if(!level.hasChunkAt(at) || !level.hasChunkAt(at.below()) || !level.hasChunkAt(at.above())
+                   || !level.getBlockState(at.below()).isSolidRender(level,at.below()))continue;
                 if(!level.getBlockState(at).isAir()||!level.getBlockState(at.above()).isAir())continue;
+                // Prefer nearly player-level ground to reduce inaccessible cliff/top-of-tree spawns.
+                if(Math.abs(at.getY()-p.getBlockY())>3 && i < attempts-8)continue;
                 if(!level.getGameRules().getBoolean(WhisperRules.UNDERGROUND)&&!level.canSeeSky(at))continue;
                 if(level.getGameRules().getBoolean(WhisperRules.ELEVATED_WATCH) && kind==EncounterKind.HILL
                      && at.getY()<p.getBlockY()+3)continue;
