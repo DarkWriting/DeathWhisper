@@ -21,8 +21,15 @@ public final class DeathWhisper {
     public static final DeferredHolder<EntityType<?>, EntityType<WatcherEntity>> WATCHER = ENTITIES.register("watcher", () ->
         EntityType.Builder.<WatcherEntity>of(WatcherEntity::new, MobCategory.MISC)
             .sized(0.65f, 1.95f).clientTrackingRange(80).updateInterval(2).build("deathwhisper:watcher"));
-    public static final DeferredHolder<SoundEvent, SoundEvent> WHISTLE = SOUNDS.register("whistle", () ->
-        SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ID, "whistle")));
+    private static DeferredHolder<SoundEvent,SoundEvent> sound(String name) {
+        return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ID,name)));
+    }
+    public static final DeferredHolder<SoundEvent, SoundEvent> WHISTLE = sound("whistle");
+    public static final DeferredHolder<SoundEvent, SoundEvent> WHISTLE_ALT = sound("whistle_alt");
+    public static final DeferredHolder<SoundEvent, SoundEvent> WHISTLE_LOW = sound("whistle_low");
+    public static final DeferredHolder<SoundEvent, SoundEvent> FOOTSTEPS = sound("footsteps");
+    public static final DeferredHolder<SoundEvent, SoundEvent> LAUGHTER = sound("laughter");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AMBIENCE = sound("ambience");
 
     private void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(WATCHER.get(), Zombie.createAttributes().build());
