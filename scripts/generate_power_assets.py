@@ -11,7 +11,7 @@ def write(name,pixels):
     png=b"\x89PNG\r\n\x1a\n"+part(b"IHDR",struct.pack(">IIBBBBB",w,h,8,6,0,0,0))
     png+=part(b"IDAT",zlib.compress(raw,9))+part(b"IEND",b"")
     (out/(name+".png")).write_bytes(png)
-for name in ("chain_puzzle_box","blight_serum","shrouded_mask","ink_feather"):
+for name in ("chain_puzzle_box","blight_serum","shrouded_mask","ink_feather","living_harpoon","slasher_relic","security_door_controller"):
     p=[[(0,0,0,0) for x in range(32)] for y in range(32)]
     def px(x,y,c):
         if 0<=x<32 and 0<=y<32:p[y][x]=c
@@ -73,5 +73,27 @@ for name in ("chain_puzzle_box","blight_serum","shrouded_mask","ink_feather"):
             px(x,i,(193,163,217,255))
         for x,y in ((6,8),(25,5),(9,24),(24,24),(18,3)):
             px(x,y,(206,89,243,255))
+    elif name=="living_harpoon":
+        for i in range(6,27):
+            px(i,31-i,(190,199,211,255))
+            px(i+1,31-i,(70,80,92,255))
+        for t in range(7):px(21+t,6+t,(179,30,50,255))
+    elif name=="slasher_relic":
+        for y in range(4,29):
+            for x in range(6,26):
+                if (x-15.5)**2/127+(y-15)**2/170<1:px(x,y,(30,29,39,255))
+        for y in range(7,27):
+            for x in range(10,22):
+                if (x-15.5)**2/42+(y-16)**2/100<1:px(x,y,(178,181,178,255))
+        for x in (12,13,18,19):
+            for y in (14,15):px(x,y,(15,15,20,255))
+        for y in range(18,25):px(16,y,(157,17,34,255))
+    elif name=="security_door_controller":
+        for y in range(3,29):
+            for x in range(5,27):px(x,y,(103,101,117,255) if x in (5,26) or y in (3,28) else (22,25,39,255))
+        for y in range(7,20):
+            for x in range(8,24):px(x,y,(38,79,98,255))
+        for x in (10,15,20):
+            for y in (23,25):px(x,y,(165,49,174,255))
     write(name,p)
 print("Created power item icons.")
