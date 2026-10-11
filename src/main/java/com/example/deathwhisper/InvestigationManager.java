@@ -163,7 +163,7 @@ public final class InvestigationManager {
         });
         tape.set(DataComponents.CUSTOM_NAME,Component.literal("Cursed Tape - "+site.focus.getX()+", "+site.focus.getZ()));
         if(!p.getInventory().add(tape))p.drop(tape,false);
-        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.SCULK_SENSOR_CLICKING_STOP,
+        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.NOTE_BLOCK_PLING.value(),
            SoundSource.PLAYERS,.5f,.76f);
         p.sendSystemMessage(Component.literal("§5A recording materializes. Play the tape to hear what was captured."));
         record(p,site,voice?GhostProfile.VOICE:0);
