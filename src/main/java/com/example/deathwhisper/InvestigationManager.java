@@ -37,6 +37,9 @@ public final class InvestigationManager {
     private final Map<UUID,FootTrail> trails=new HashMap<>();
     private final Map<UUID,Long> nextFootstep=new HashMap<>();
     private final Map<String,GhostHunt> hunts=new LinkedHashMap<>();
+    /** Temporary, administrator-triggered target for deterministic evidence tests. */
+    private record TestFocus(String siteKey,long expires){}
+    private final Map<UUID,TestFocus> uvTests=new HashMap<>();
     private long ticks=0;
     private static final class Haunting {
         final ResourceKey<Level> dimension;
@@ -101,6 +104,15 @@ public final class InvestigationManager {
         return site;
     }
     private Haunting nearby(ServerPlayer p,double distance){
+        TestFocus test=uvTests.get(p.getUUID());
+        if(test!=null){
+            Haunting pinned=sites.get(test.siteKey());
+            if(ticks<test.expires() && pinned!=null && pinned.dimension==p.level().dimension()
+                && pinned.focus.distSqr(p.blockPosition())<=Math.min(distance*distance,20*20)){
+                pinned.lastActive=ticks;return pinned;
+            }
+            uvTests.remove(p.getUUID());
+        }
         Haunting selected=null;
         double best=distance*distance;
         for(Haunting site:sites.values()){
@@ -320,6 +332,46 @@ public final class InvestigationManager {
     }
 
     /** Explicit OP test: put recognizable footprint flashes IN FRONT of the player. */
+    /** Create a nearby reproducible ghost with ink evidence, without faking a positive UV reading. */
+    public boolean forceUvTest(ServerPlayer player){
+        ServerLevel level=player.serverLevel();
+        if(!enabled(level)){
+            player.sendSystemMessage(Component.literal("Investigations are disabled."));
+            return false;
+        }
+        BlockPos origin=player.blockPosition();
+        for(int radius=0;radius<=10;radius++){
+            for(int dx=-radius;dx<=radius;dx++){
+                for(int dz=-radius;dz<=radius;dz++){
+                    if(Math.max(Math.abs(dx),Math.abs(dz))!=radius)continue;
+                    for(int dy=-2;dy<=2;dy++){
+                        BlockPos pos=origin.offset(dx,dy,dz);
+                        if(!level.hasChunkAt(pos)||!level.hasChunkAt(pos.below()))continue;
+                        if(!level.getBlockState(pos).isAir() ||
+                            !level.getBlockState(pos.below()).isSolidRender(level,pos.below()))continue;
+                        long input=level.getSeed() ^ pos.asLong() ^ level.dimension().location().hashCode();
+                        input^=input>>>33;input*=0xff51afd7ed558ccdL;input^=input>>>33;
+                        input*=0xc4ceb9fe1a85ec53L;input^=input>>>33;
+                        GhostProfile type=GhostProfile.values()[Math.floorMod(input,GhostProfile.values().length)];
+                        if(!type.has(GhostProfile.INK))continue;
+                        Haunting site=create(level,pos);
+                        if(site==null)continue;
+                        uvTests.put(player.getUUID(),new TestFocus(key(level.dimension(),pos),ticks+20*90));
+                        record(player,site,0);
+                        player.sendSystemMessage(Component.literal(
+                            "§dUV test: a guaranteed ink-evidence haunting is active at "+pos.toShortString()+
+                            ". Right-click the UV lamp now, then check your journal. Test expires in 90 seconds."));
+                        level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,pos.getX()+.5,pos.getY()+.4,
+                            pos.getZ()+.5,18,.4,.25,.4,.015);
+                        return true;
+                    }
+                }
+            }
+        }
+        player.sendSystemMessage(Component.literal("No safe, loaded location for a UV test nearby."));
+        return false;
+    }
+
     public boolean forceFootprints(ServerPlayer p){
         ServerLevel level=p.serverLevel();
         if(!feature(level,WhisperRules.FOOTPRINTS_ENABLED)) {
@@ -420,11 +472,13 @@ public final class InvestigationManager {
             }
         }else if(tool==InvestigationItem.Tool.UV){
             if(site.ghost.has(GhostProfile.INK)){
-                p.sendSystemMessage(Component.literal("§5UV LAMP: strange ink-like fingerprints glow on nearby surfaces."));
-                level.sendParticles(ParticleTypes.SQUID_INK,site.focus.getX()+.5,site.focus.getY()+1,site.focus.getZ()+.5,9,.6,.45,.6,.02);
+                p.sendSystemMessage(Component.literal("§d[UV] POSITIVE: supernatural ink fingerprints glow around the haunting."));
+                level.sendParticles(ParticleTypes.SQUID_INK,site.focus.getX()+.5,site.focus.getY()+1,site.focus.getZ()+.5,16,.6,.45,.6,.02);
+                level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,p.getX(),p.getY()+1,p.getZ(),8,.6,.3,.6,.02);
+                level.playSound(null,p.blockPosition(),SoundEvents.NOTE_BLOCK_PLING.value(),SoundSource.PLAYERS,.8f,1.7f);
                 record(p,site,GhostProfile.INK);
             }else{
-                p.sendSystemMessage(Component.literal("§7UV LAMP: no spectral residue detected."));
+                p.sendSystemMessage(Component.literal("§7[UV] NEGATIVE: no spectral ink at this haunting. Not every ghost produces UV evidence."));
                 record(p,site,0);
             }
         }else if(tool==InvestigationItem.Tool.THERMOMETER){
