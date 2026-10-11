@@ -18,6 +18,7 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y ffmpeg
           python3 scripts/generate_assets.py
+          python3 scripts/generate_power_assets.py
           mkdir -p src/main/resources/assets/deathwhisper/sounds
           for f in build/*.wav; do
             name="$(basename "$f" .wav)"
