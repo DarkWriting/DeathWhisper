@@ -33,7 +33,11 @@ public final class PowerFramework {
         register(new SupernaturalAbility() {
             public String id(){return "blight_serum";}
             public boolean activate(ServerPlayer p){return existing.useSerum(p);}
-            public int cooldownTicks(ServerPlayer p){return 7;}
+            public int cooldownTicks(ServerPlayer p){
+                return 20*Math.max(5,p.level().getGameRules().getInt(WhisperRules.RUSH_COOLDOWN));
+            }
+            public boolean hasRecastStage(){return true;}
+            public boolean allowRecastOnCooldown(ServerPlayer p){return existing.canRecastSerum(p);}
         });
         register(new GhostPower());
         register(new ArtistPower());
@@ -76,7 +80,8 @@ public final class PowerFramework {
         return join.toString();
     }
     public static boolean canAffect(ServerPlayer source, LivingEntity target){
-        if(target==source || target instanceof WatcherEntity || !target.isAlive() || target.isSpectator())
+        if(target==source || target instanceof WatcherEntity || target instanceof GhostApparition
+            || !target.isAlive() || target.isSpectator())
             return false;
         if(target instanceof ServerPlayer player)
             return source.serverLevel().getGameRules().getBoolean(WhisperRules.POWERS_PVP)
