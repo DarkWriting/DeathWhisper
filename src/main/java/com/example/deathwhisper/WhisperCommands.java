@@ -105,6 +105,9 @@ public final class WhisperCommands {
             .then(Commands.literal("list").executes(c->{
                 SecurityDoorController.showPanel(c.getSource().getPlayerOrException());return 1;
             }))
+            .then(Commands.literal("unlink").then(Commands.argument("door",IntegerArgumentType.integer(1,12))
+                .executes(c->SecurityDoorController.unlink(c.getSource().getPlayerOrException(),
+                    IntegerArgumentType.getInteger(c,"door")))))
             .then(Commands.literal("scan").then(Commands.argument("door",IntegerArgumentType.integer(1,12))
                 .executes(c->SecurityDoorController.scan(c.getSource().getPlayerOrException(),
                     IntegerArgumentType.getInteger(c,"door")))))
