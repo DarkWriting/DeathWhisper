@@ -2,7 +2,6 @@ package com.example.deathwhisper;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
@@ -42,6 +41,11 @@ public final class WhisperCommands {
               ServerPlayer p=EntityArgument.getPlayer(c,"player");
               c.getSource().sendSuccess(()->Component.literal(manager.memory(p)),false);return 1;
           })))
+          .then(Commands.literal("test").then(Commands.argument("mode",StringArgumentType.word())
+             .suggests((c,b)->net.minecraft.commands.SharedSuggestionProvider.suggest(
+                java.util.List.of("peek","charge","whistle"),b))
+             .executes(c->manager.diagnostic(c.getSource().getPlayerOrException(),
+                StringArgumentType.getString(c,"mode"))?1:0)))
           .then(Commands.literal("scene").then(Commands.argument("kind", StringArgumentType.word())
               .executes(c -> {
                   ServerPlayer p = c.getSource().getPlayerOrException();
