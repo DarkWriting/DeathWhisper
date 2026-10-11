@@ -11,6 +11,8 @@ public interface SupernaturalAbility {
     boolean activate(ServerPlayer player);
     /** Gamerule-driven cooldown, in ticks. */
     int cooldownTicks(ServerPlayer player);
+    /** Allows a second activation while its first effect is still live, without resetting the main cooldown. */
+    default boolean allowRecastOnCooldown(ServerPlayer player) {return false;}
     default void serverTick(MinecraftServer server) {}
     default void beforeDamage(LivingDamageEvent.Pre event) {}
 }

@@ -95,6 +95,19 @@ public final class WhisperCommands {
               .then(Commands.argument("amount", IntegerArgumentType.integer(0, 100))
               .executes(c -> { ServerPlayer p = EntityArgument.getPlayer(c, "player"); manager.setThreat(p, IntegerArgumentType.getInteger(c, "amount")); return 1; }))))
         );
+        // Network panel commands are player-accessible but ALWAYS require holding
+        // a linked controller; the networking class performs distance and chunk checks.
+        event.getDispatcher().register(Commands.literal("deathwhispersecurity")
+            .then(Commands.literal("list").executes(c->{
+                SecurityDoorController.showPanel(c.getSource().getPlayerOrException());return 1;
+            }))
+            .then(Commands.literal("scan").then(Commands.argument("door",IntegerArgumentType.integer(1,12))
+                .executes(c->SecurityDoorController.scan(c.getSource().getPlayerOrException(),
+                    IntegerArgumentType.getInteger(c,"door")))))
+            .then(Commands.literal("travel").then(Commands.argument("door",IntegerArgumentType.integer(1,12))
+                .executes(c->SecurityDoorController.travel(c.getSource().getPlayerOrException(),
+                    IntegerArgumentType.getInteger(c,"door")))))
+        );
     }
     private int spawnKind(ServerPlayer p,String kind) {
         EncounterKind script=EncounterKind.parse(kind);

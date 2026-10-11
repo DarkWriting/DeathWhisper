@@ -32,6 +32,14 @@ public final class DeathWhisper {
     public static final net.neoforged.neoforge.registries.DeferredItem<PowerItem> ARTIST_FEATHER =
         ITEMS.registerItem("ink_feather",p->new PowerItem(p,"ink_feather"),new Item.Properties().stacksTo(1));
 
+
+    public static final net.neoforged.neoforge.registries.DeferredItem<PowerItem> LIVING_HARPOON =
+        ITEMS.registerItem("living_harpoon",p->new PowerItem(p,"living_harpoon"),new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<PowerItem> SLASHER_RELIC =
+        ITEMS.registerItem("slasher_relic",p->new PowerItem(p,"slasher_relic"),new Item.Properties().stacksTo(1));
+    public static final net.neoforged.neoforge.registries.DeferredItem<SecurityDoorController> SECURITY_CONTROLLER =
+        ITEMS.registerItem("security_door_controller",SecurityDoorController::new,new Item.Properties().stacksTo(1));
+
     private static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, ID);
     private static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, ID);
     public static final DeferredHolder<EntityType<?>, EntityType<WatcherEntity>> WATCHER = ENTITIES.register("watcher", () ->
@@ -53,6 +61,9 @@ public final class DeathWhisper {
             event.accept(RUSH_SERUM.get());
             event.accept(GHOST_MASK.get());
             event.accept(ARTIST_FEATHER.get());
+            event.accept(LIVING_HARPOON.get());
+            event.accept(SLASHER_RELIC.get());
+            event.accept(SECURITY_CONTROLLER.get());
         }
     }
     private void registerAttributes(EntityAttributeCreationEvent event) {

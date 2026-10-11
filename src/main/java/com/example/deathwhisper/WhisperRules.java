@@ -83,4 +83,21 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.IntegerValue> CROW_RANGE = integer("CrowRange",28);
     public static final GameRules.Key<GameRules.IntegerValue> CROW_REVEAL_SECONDS = integer("CrowRevealSeconds",9);
     public static final GameRules.Key<GameRules.IntegerValue> CROW_SPEED = integer("CrowSpeed",105);
+
+    // Living Harpoon is strictly player-only, independently opt-in.
+    public static final GameRules.Key<GameRules.BooleanValue> HARPOON_PVP=bool("HarpoonPvp",false);
+    public static final GameRules.Key<GameRules.IntegerValue> HARPOON_RANGE=integer("HarpoonRange",20);
+    public static final GameRules.Key<GameRules.IntegerValue> HARPOON_COOLDOWN=integer("HarpoonCooldown",16);
+    public static final GameRules.Key<GameRules.IntegerValue> HARPOON_SECONDS=integer("HarpoonSeconds",3);
+    public static final GameRules.Key<GameRules.IntegerValue> HARPOON_PULL=integer("HarpoonPull",24);
+    // Slasher: invisibility, private footprint tracking and optional second-use lunge.
+    public static final GameRules.Key<GameRules.IntegerValue> SLASHER_COOLDOWN=integer("SlasherCooldown",26);
+    public static final GameRules.Key<GameRules.IntegerValue> SLASHER_SECONDS=integer("SlasherSeconds",12);
+    public static final GameRules.Key<GameRules.IntegerValue> SLASHER_TRACK_RANGE=integer("SlasherTrackRange",28);
+    public static final GameRules.Key<GameRules.IntegerValue> SLASHER_LUNGE_SPEED=integer("SlasherLungeSpeed",140);
+    public static final GameRules.Key<GameRules.BooleanValue> SLASHER_TRACK_PLAYERS=bool("SlasherTrackPlayers",false);
+    // Player-owned existing iron-door network: only loaded same-dimension destinations.
+    public static final GameRules.Key<GameRules.BooleanValue> SECURITY_ENABLED=bool("SecurityEnabled",true);
+    public static final GameRules.Key<GameRules.IntegerValue> SECURITY_MAX_DOORS=integer("SecurityMaxDoors",8);
+    public static final GameRules.Key<GameRules.IntegerValue> SECURITY_SCAN_RADIUS=integer("SecurityScanRadius",8);
 }

@@ -37,6 +37,8 @@ public final class PowerFramework {
         });
         register(new GhostPower());
         register(new ArtistPower());
+        register(new LivingHarpoonPower());
+        register(new SlasherPower());
     }
     public void register(SupernaturalAbility ability){
         if(registered.putIfAbsent(ability.id(),ability)!=null)
@@ -50,12 +52,16 @@ public final class PowerFramework {
         if(ability==null)return false;
         long now=player.serverLevel().getServer().overworld().getGameTime();
         Long expires=cooldownEnds.get(abilityId).get(player.getUUID());
-        if(expires!=null && expires>now)return false;
-        if(player.getCooldowns().isOnCooldown(item))return false;
+
+        boolean recast=ability.allowRecastOnCooldown(player);
+        if(expires!=null && expires>now && !recast)return false;
+        if(player.getCooldowns().isOnCooldown(item) && !recast)return false;
         if(!ability.activate(player))return false;
-        int ticks=Math.max(1,ability.cooldownTicks(player));
-        cooldownEnds.get(abilityId).put(player.getUUID(),now+ticks);
-        player.getCooldowns().addCooldown(item,ticks);
+        if(!recast) {
+            int ticks=Math.max(1,ability.cooldownTicks(player));
+            cooldownEnds.get(abilityId).put(player.getUUID(),now+ticks);
+            player.getCooldowns().addCooldown(item,ticks);
+        }
         return true;
     }
     public String status(ServerPlayer player){
