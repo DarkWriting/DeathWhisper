@@ -131,7 +131,7 @@ public final class HorrorPowers {
                 state.collided=true;
                 level.playSound(null,player.blockPosition(),net.minecraft.sounds.SoundEvents.ANVIL_LAND,
                     net.minecraft.sounds.SoundSource.PLAYERS,.5f,1.4f);
-                level.sendParticles(ParticleTypes.SMOKE,player.getX(),player.getY()+1,9,.4,.4,.4,.02);
+                level.sendParticles(ParticleTypes.SMOKE,player.getX(),player.getY()+1,player.getZ(),9,.4,.4,.4,.02);
                 player.displayClientMessage(Component.literal("Rebound! Use the serum to rush again"),true);
                 return false;
             }
@@ -141,7 +141,7 @@ public final class HorrorPowers {
             player.hurtMarked=true;
             player.fallDistance=0;
             if(now%2==0)
-                level.sendParticles(ParticleTypes.WITCH,player.getX(),player.getY()+.6,4,.26,.25,.26,.025);
+                level.sendParticles(ParticleTypes.WITCH,player.getX(),player.getY()+.6,player.getZ(),4,.26,.25,.26,.025);
             return false;
         });
     }
