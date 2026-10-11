@@ -14,6 +14,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Generate original texture and whistle assets
+        run: |
+          python3 scripts/generate_assets.py
+          ffmpeg -loglevel error -y -i build/whistle.wav -c:a libvorbis -q:a 4 src/main/resources/assets/deathwhisper/sounds/whistle.ogg
       - name: Get Gradle wrapper from NeoForge MDK
         run: |
           git clone --depth 1 https://github.com/NeoForgeMDKs/MDK-1.21.1-ModDevGradle.git /tmp/neoforge-mdk
