@@ -24,11 +24,11 @@ public final class ClientSetup {
         private static final ResourceLocation GLOW=ResourceLocation.fromNamespaceAndPath("deathwhisper","textures/entity/watcher_eyes.png");
         public WatcherRenderer(EntityRendererProvider.Context context) {
             super(context);
-            this.model=new WolfModel(context.bakeLayer(WolfModel.LAYER));
+            // Doppelganger keeps the vanilla humanoid silhouette and skin UV layout.
             this.addLayer(new EyesLayer<net.minecraft.world.entity.monster.Zombie,ZombieModel<net.minecraft.world.entity.monster.Zombie>>(this) {
                 @Override public RenderType renderType() { return RenderType.eyes(GLOW); }
             });
         }
-        @Override public ResourceLocation getTextureLocation(net.minecraft.world.entity.monster.Zombie entity) { return SKIN; }
+        @Override public ResourceLocation getTextureLocation(net.minecraft.world.entity.monster.Zombie entity) { return InvertedSkins.skin(((WatcherEntity)entity).skinTarget()); }
     }
 }
