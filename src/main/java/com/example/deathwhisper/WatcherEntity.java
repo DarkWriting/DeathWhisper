@@ -21,6 +21,7 @@ import net.minecraft.world.level.ClipContext;
 public final class WatcherEntity extends Zombie {
     private static final EntityDataAccessor<Integer> PEEK_SIDE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PEEK_ACTIVE = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<String> TARGET_SKIN = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> MOOD = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> TARGET_SKIN = SynchedEntityData.defineId(WatcherEntity.class, EntityDataSerializers.STRING);
     private UUID chosenPlayer;
@@ -73,6 +74,7 @@ public final class WatcherEntity extends Zombie {
         builder.define(PEEK_SIDE, 1);
         builder.define(PEEK_ACTIVE, 0);
         builder.define(MOOD, 0);
+        builder.define(TARGET_SKIN, "");
         builder.define(TARGET_SKIN, "");
     }
 
