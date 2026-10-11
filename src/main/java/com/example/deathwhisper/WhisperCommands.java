@@ -43,7 +43,7 @@ public final class WhisperCommands {
           })))
           .then(Commands.literal("test").then(Commands.argument("mode",StringArgumentType.word())
              .suggests((c,b)->net.minecraft.commands.SharedSuggestionProvider.suggest(
-                java.util.List.of("peek","charge","whistle"),b))
+                java.util.List.of("peek","charge","whistle","stalk"),b))
              .executes(c->manager.diagnostic(c.getSource().getPlayerOrException(),
                 StringArgumentType.getString(c,"mode"))?1:0)))
           .then(Commands.literal("scene").then(Commands.argument("kind", StringArgumentType.word())
