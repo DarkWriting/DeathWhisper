@@ -100,6 +100,15 @@ public final class SecurityDoorController extends Item {
         }
         p.sendSystemMessage(Component.literal("Travel: stand near any registered iron door in the same dimension."));
     }
+    public static int unlink(ServerPlayer p,int index) {
+        if(!holding(p))return 0;
+        ListTag doors=list(p);
+        if(index<1 || index>doors.size())return 0;
+        doors.remove(index-1);
+        p.getPersistentData().put(KEY,doors);
+        p.sendSystemMessage(Component.literal("Removed door "+index+" from the network."));
+        return 1;
+    }
     public static int scan(ServerPlayer p,int index) {
         if(!holding(p)||!p.level().getGameRules().getBoolean(WhisperRules.SECURITY_ENABLED))return 0;
         ListTag saved=list(p);
