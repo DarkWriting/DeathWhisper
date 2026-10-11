@@ -2,6 +2,7 @@ package com.example.deathwhisper;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.MobRenderer;
+import net.minecraft.client.renderer.entity.ZombieRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.layers.EyesLayer;
 import net.minecraft.client.renderer.RenderType;
@@ -24,6 +25,7 @@ public final class ClientSetup {
     }
     @SubscribeEvent public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(DeathWhisper.WATCHER.get(),MirrorRenderer::new);
+        event.registerEntityRenderer(DeathWhisper.GHOST_APPARITION.get(),GhostRenderer::new);
     }
     public static final class MirrorRenderer extends MobRenderer<WatcherEntity,MirrorModel> {
         private static final ResourceLocation GLOW=ResourceLocation.fromNamespaceAndPath("deathwhisper","textures/entity/watcher_eyes.png");
@@ -59,6 +61,23 @@ public final class ClientSetup {
             if(id==null || conn==null)return false;
             var info=conn.getPlayerInfo(id);
             return info!=null && info.getSkin().model()==PlayerSkin.Model.SLIM;
+        }
+    }
+
+    /** Transparent, glowing original ghost texture on a real animated humanoid entity. */
+    public static final class GhostRenderer extends ZombieRenderer {
+        private static final ResourceLocation GHOST=ResourceLocation.fromNamespaceAndPath(
+            DeathWhisper.ID,"textures/entity/ghost_apparition.png");
+        public GhostRenderer(EntityRendererProvider.Context context){super(context);}
+        @Override public ResourceLocation getTextureLocation(net.minecraft.world.entity.monster.Zombie entity){
+            return GHOST;
+        }
+        @Override protected RenderType getRenderType(net.minecraft.world.entity.monster.Zombie entity,
+               boolean bodyVisible,boolean translucent,boolean glowing){
+            return RenderType.entityTranslucent(GHOST);
+        }
+        @Override protected float getShadowRadius(net.minecraft.world.entity.monster.Zombie entity){
+            return 0;
         }
     }
 }
