@@ -22,7 +22,7 @@ public final class HorrorPowers {
 
     private record ChainLink(UUID owner,UUID target,ResourceKey<Level> dimension,long expires) {}
     private static final class RushState {
-        long expires, dashUntil, nextAllowed, reboundUntil;
+        long expires, dashUntil, nextAllowed;
         int charges;
         Vec3 direction = Vec3.ZERO;
         boolean collided;
@@ -62,28 +62,39 @@ public final class HorrorPowers {
         return selected;
     }
 
+    /** Subsequent serum activations can bypass the long cooldown only during an active rush session. */
+    public boolean canRecastSerum(ServerPlayer player) {
+        RushState state=rushing.get(player.getUUID());
+        if(state==null)return false;
+        long now=player.getServer().overworld().getGameTime();
+        return now<=state.expires && state.charges>0 && now>=state.dashUntil
+            && now>=state.nextAllowed && player.isAlive();
+    }
     public boolean useSerum(ServerPlayer player) {
         ServerLevel level=player.serverLevel();
         if(!level.getGameRules().getBoolean(WhisperRules.POWERS_ENABLED))return false;
-        long now=level.getGameTime();
+        long now=level.getServer().overworld().getGameTime();
         RushState state=rushing.get(player.getUUID());
-        if(state==null || state.expires<now) {
+        if(state==null || state.expires<now){
             state=new RushState();
             state.charges=Mth.clamp(level.getGameRules().getInt(WhisperRules.RUSH_CHARGES),1,10);
             state.expires=now+20L*Mth.clamp(level.getGameRules().getInt(WhisperRules.RUSH_WINDOW),5,90);
             rushing.put(player.getUUID(),state);
         }
-        if(state.charges<=0 || now<state.nextAllowed || now<state.dashUntil)return false;
+        if(state.charges<=0 || now<state.nextAllowed || now<state.dashUntil){
+            player.displayClientMessage(Component.literal("Serum cooling down or already rushing."),true);
+            return false;
+        }
         state.charges--;
         state.direction=player.getLookAngle().normalize();
         state.collided=false;
         state.dashUntil=now+Mth.clamp(level.getGameRules().getInt(WhisperRules.RUSH_TICKS),5,25);
-        state.nextAllowed=now+7;
-        state.reboundUntil=now+50;
+        state.nextAllowed=now+8;
         player.fallDistance=0;
         level.playSound(null,player.blockPosition(),net.minecraft.sounds.SoundEvents.BREEZE_SHOOT,
             net.minecraft.sounds.SoundSource.PLAYERS,.95f,1.35f);
-        player.displayClientMessage(Component.literal("Serum rush  •  "+state.charges+" charges remaining"),true);
+        player.displayClientMessage(Component.literal("Blighted rush • "+state.charges+
+            " charges remain • aim at a wall to rebound"),true);
         return true;
     }
 
@@ -122,11 +133,16 @@ public final class HorrorPowers {
             ServerLevel level=player.serverLevel();
             if(player.horizontalCollision && now+2<state.dashUntil) {
                 state.dashUntil=now;
+                state.nextAllowed=now+6;
                 state.collided=true;
+                Vec3 recoil=state.direction.scale(-.20);
+                player.setDeltaMovement(recoil.x,.13,recoil.z);
+                player.hurtMarked=true;
                 level.playSound(null,player.blockPosition(),net.minecraft.sounds.SoundEvents.ANVIL_LAND,
                     net.minecraft.sounds.SoundSource.PLAYERS,.5f,1.4f);
                 level.sendParticles(ParticleTypes.SMOKE,player.getX(),player.getY()+1,player.getZ(),9,.4,.4,.4,.02);
-                player.displayClientMessage(Component.literal("Rebound! Use the serum to rush again"),true);
+                player.displayClientMessage(Component.literal(state.charges>0 ?
+                    "Wall rebound! Re-aim and use serum again." : "Final rebound. Serum exhausted."),true);
                 return false;
             }
             double speed=Mth.clamp(level.getGameRules().getInt(WhisperRules.RUSH_SPEED),40,185)/100.0;
