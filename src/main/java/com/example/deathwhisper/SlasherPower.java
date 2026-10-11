@@ -29,6 +29,7 @@ public final class SlasherPower implements SupernaturalAbility {
     @Override public int cooldownTicks(ServerPlayer p){
         return 20*Mth.clamp(p.level().getGameRules().getInt(WhisperRules.SLASHER_COOLDOWN),5,180);
     }
+    @Override public boolean hasRecastStage(){return true;}
     @Override public boolean allowRecastOnCooldown(ServerPlayer p){
         State state=active.get(p.getUUID());
         long now=p.getServer().overworld().getGameTime();
