@@ -56,10 +56,15 @@ public final class CameraPackets {
         registrar.playToServer(Control.TYPE,Control.STREAM_CODEC,CameraPackets::onControl);
     }
     private static void onView(View packet,IPayloadContext context){
-        // Do not classload the client renderer on a dedicated server.
-        if(FMLEnvironment.dist==Dist.CLIENT) ClientCamera.receive(packet);
+        // Screen and client camera state MUST be mutated on the client render thread.
+        if(FMLEnvironment.dist==Dist.CLIENT)
+            context.enqueueWork(()->ClientCamera.receive(packet));
     }
     private static void onControl(Control packet,IPayloadContext context){
+        // Input packets arrive from networking; all world and session state is server-main-thread.
+        context.enqueueWork(()->processControl(packet,context));
+    }
+    private static void processControl(Control packet,IPayloadContext context){
         if(!(context.player() instanceof ServerPlayer player))return;
         if(!Float.isFinite(packet.yaw()) || !Float.isFinite(packet.pitch()))return;
         Session session=ACTIVE.get(player.getUUID());
@@ -72,7 +77,10 @@ public final class CameraPackets {
         float yaw=Mth.wrapDegrees(packet.yaw());
         float pitch=Mth.clamp(packet.pitch(),-85,85);
         switch(packet.action()){
-            case "close" -> close(player);
+            case "close" -> {
+                if(session.mode.equals("gateway"))DeathWhisper.CENOBITE.cancelCamera(player);
+                close(player);
+            }
             case "aim" -> {
                 if(session.mode.equals("gateway"))
                     DeathWhisper.CENOBITE.cameraAim(player,yaw,pitch);
