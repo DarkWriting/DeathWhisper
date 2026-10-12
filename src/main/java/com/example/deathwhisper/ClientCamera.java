@@ -112,7 +112,7 @@ public final class ClientCamera {
                 mc.player.displayClientMessage(Component.literal("§cCamera range lost."),true);
                 stop(true);return;
             }
-            if(mode.equals("gateway") && ++ticks%4==0 && !fired)control("aim");
+            if(mode.equals("gateway") && ++ticks%4==0)control("aim");
         }
         @Override public void mouseMoved(double mouseX,double mouseY){
             if(Double.isFinite(previousX)&&Double.isFinite(previousY)){
