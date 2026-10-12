@@ -72,6 +72,7 @@ public final class CenobitePower implements SupernaturalAbility {
     }
 
     private final Map<UUID,Gateway> gateways=new HashMap<>();
+    private final Map<UUID,Vec3> cameraAim=new HashMap<>();
     private final List<FlyingChain> flying=new ArrayList<>();
     private final Map<UUID,Bound> bound=new HashMap<>();
     private final Map<UUID,Hunt> hunts=new HashMap<>();
@@ -91,34 +92,10 @@ public final class CenobitePower implements SupernaturalAbility {
         ServerLevel level=p.serverLevel();
         long now=p.getServer().overworld().getGameTime();
         Gateway g=gateways.remove(p.getUUID());
-        if(g!=null && now<=g.expires && g.dimension==level.dimension()){
-            Vec3 direction=p.getLookAngle().normalize();
-            flying.add(new FlyingChain(p.getUUID(),level.dimension(),g.point,direction.scale(
-                Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAIN_SPEED),4,18)/10.0)));
-            level.playSound(null,BlockPos.containing(g.point),SoundEvents.CHAIN_PLACE,
-                SoundSource.PLAYERS,1.2f,.8f);
-            p.displayClientMessage(Component.literal("Possessed chain launched. Keep aiming to steer it."),true);
-            if(level.getGameRules().getBoolean(WhisperRules.CHAIN_HUNTS_ENABLED)
-                && !hunts.containsKey(p.getUUID())){
-                hunts.put(p.getUUID(),new Hunt(p.getUUID(),level.dimension(),now,
-                    20L*Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAIN_HUNT_DELAY),15,180)));
-                // A real discoverable world item provides counterplay, instead of an
-                // unavoidable passive curse. It uses vanilla item-entity persistence.
-                Vec3 drop=p.position().add(p.getLookAngle().multiply(-3,0,-3));
-                BlockPos location=BlockPos.containing(drop);
-                if(level.hasChunkAt(location)){
-                    var item=new net.minecraft.world.entity.item.ItemEntity(level,
-                        drop.x,p.getY()+.4,drop.z,
-                        new net.minecraft.world.item.ItemStack(DeathWhisper.LAMENT_CONFIGURATION.get()));
-                    item.setPickUpDelay(20);
-                    level.addFreshEntity(item);
-                    p.sendSystemMessage(Component.literal("§5The Lament Configuration has appeared nearby. "+
-                        "Recover and solve it before the Chain Hunt begins."));
-                }
-            }
-            return true;
+        if(g!=null && now<=g.expires && g.dimension==level.d        if(g!=null && now<=g.expires && g.dimension==level.dimension()){
+            return launch(p,g,p.getLookAngle().normalize(),now);
         }
-        int range=Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAINS_RANGE),5,25);
+perRules.CHAINS_RANGE),5,25);
         Vec3 eye=p.getEyePosition();
         Vec3 end=eye.add(p.getLookAngle().scale(range));
         var block=level.clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,p));
@@ -126,9 +103,50 @@ public final class CenobitePower implements SupernaturalAbility {
         if(!level.hasChunkAt(BlockPos.containing(point)))return false;
         gateways.put(p.getUUID(),new Gateway(level.dimension(),point,now+120));
         level.sendParticles(ParticleTypes.PORTAL,point.x,point.y,point.z,28,.4,.6,.4,.12);
-        p.displayClientMessage(Component.literal("Gateway placed. Aim and use the box again within 6 seconds."),true);
+        p.displayClientMessage(Component.literal("Gateway opened. Camera: F or left-click to launch; move mouse to steer; ESC to exit."),true);
+        CameraPackets.gateway(p,point);
         return true;
     }
+    /** Client perspective is never trusted: this method verifies a real active gateway. */
+    public void cameraAim(ServerPlayer p,float yaw,float pitch){
+        if(!CameraPackets.isGatewayViewing(p))return;
+        cameraAim.put(p.getUUID(),Vec3.directionFromRotation(pitch,yaw).normalize());
+    }
+    public boolean fireFromCamera(ServerPlayer p,float yaw,float pitch){
+        if(!CameraPackets.isGatewayViewing(p))return false;
+        Gateway g=gateways.get(p.getUUID());
+        long now=p.getServer().overworld().getGameTime();
+        if(g==null || g.dimension!=p.level().dimension() || now>g.expires)return false;
+        gateways.remove(p.getUUID());
+        Vec3 look=Vec3.directionFromRotation(pitch,yaw).normalize();
+        cameraAim.put(p.getUUID(),look);
+        return launch(p,g,look,now);
+    }
+    private boolean launch(ServerPlayer p,Gateway g,Vec3 direction,long now){
+        ServerLevel level=p.serverLevel();
+        if(flying.size()>=36)return false;
+        flying.add(new FlyingChain(p.getUUID(),level.dimension(),g.point,
+            direction.scale(Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAIN_SPEED),4,18)/10.0)));
+        level.playSound(null,BlockPos.containing(g.point),SoundEvents.CHAIN_PLACE,
+            SoundSource.PLAYERS,1.2f,.8f);
+        p.displayClientMessage(Component.literal("Possessed chain launched from gateway. Aim to steer."),true);
+        if(level.getGameRules().getBoolean(WhisperRules.CHAIN_HUNTS_ENABLED)
+            && !hunts.containsKey(p.getUUID())){
+            hunts.put(p.getUUID(),new Hunt(p.getUUID(),level.dimension(),now,
+                20L*Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAIN_HUNT_DELAY),15,180)));
+            Vec3 drop=p.position().add(p.getLookAngle().multiply(-3,0,-3));
+            if(level.hasChunkAt(BlockPos.containing(drop))){
+                var item=new net.minecraft.world.entity.item.ItemEntity(level,
+                    drop.x,p.getY()+.4,drop.z,
+                    new net.minecraft.world.item.ItemStack(DeathWhisper.LAMENT_CONFIGURATION.get()));
+                item.setPickUpDelay(20);
+                level.addFreshEntity(item);
+                p.sendSystemMessage(Component.literal("§5The Lament Configuration has appeared nearby."));
+            }
+        }
+        return true;
+    }
+
     public boolean startSolving(ServerPlayer p){
         ServerLevel level=p.serverLevel();
         if(!level.getGameRules().getBoolean(WhisperRules.POWERS_ENABLED)
@@ -173,10 +191,14 @@ public final class CenobitePower implements SupernaturalAbility {
             FlyingChain chain=flight.next();
             ServerPlayer owner=server.getPlayerList().getPlayer(chain.caster);
             if(owner==null || !owner.isAlive() || owner.level().dimension()!=chain.dimension){
+                if(owner!=null)CameraPackets.close(owner);
                 flight.remove();continue;
             }
             ServerLevel level=owner.serverLevel();
-            Vec3 desired=owner.getLookAngle().normalize().scale(chain.velocity.length());
+            Vec3 look=CameraPackets.isGatewayViewing(owner)
+                ? cameraAim.getOrDefault(owner.getUUID(),owner.getLookAngle())
+                : owner.getLookAngle();
+            Vec3 desired=look.normalize().scale(chain.velocity.length());
             // The caster can steer by looking in another direction. Not a remote camera.
             chain.velocity=chain.velocity.scale(.72).add(desired.scale(.28));
             Vec3 end=chain.point.add(chain.velocity.scale(2));
@@ -185,6 +207,8 @@ public final class CenobitePower implements SupernaturalAbility {
                     ClipContext.Fluid.NONE,owner)).getType()!=HitResult.Type.MISS){
                 level.sendParticles(ParticleTypes.SMOKE,chain.point.x,chain.point.y,chain.point.z,
                     6,.2,.2,.2,.02);
+                CameraPackets.close(owner);
+                cameraAim.remove(owner.getUUID());
                 flight.remove();continue;
             }
             LivingEntity hit=null;double nearest=Double.POSITIVE_INFINITY;
@@ -201,6 +225,7 @@ public final class CenobitePower implements SupernaturalAbility {
             }
             chain.point=end;
             chain.steps+=2;
+            CameraPackets.follow(owner,end);
             if(hit!=null){
                 bound.put(hit.getUUID(),new Bound(owner.getUUID(),hit.getUUID(),level.dimension(),
                     now+20L*Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAINS_SECONDS),3,20)));
@@ -208,8 +233,12 @@ public final class CenobitePower implements SupernaturalAbility {
                 owner.displayClientMessage(Component.literal("Three chains attached to "+hit.getName().getString()),true);
                 if(hit instanceof ServerPlayer victim)
                     victim.sendSystemMessage(Component.literal("§dBound by three spectral chains! Hold SNEAK to break them one at a time."));
+                CameraPackets.close(owner);
+                cameraAim.remove(owner.getUUID());
                 flight.remove();
             } else if(chain.steps>=Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAIN_FLIGHT_TICKS),8,60)){
+                CameraPackets.close(owner);
+                cameraAim.remove(owner.getUUID());
                 flight.remove();
             }
         }
