@@ -133,6 +133,7 @@ public final class DeathWhisper {
         StalkingManager manager = new StalkingManager();
         NeoForge.EVENT_BUS.register(manager);
         NeoForge.EVENT_BUS.register(POWERS);
+        NeoForge.EVENT_BUS.addListener(CameraPackets::onServerTick);
         NeoForge.EVENT_BUS.register(FRAMEWORK);
         NeoForge.EVENT_BUS.register(INVESTIGATIONS);
         NeoForge.EVENT_BUS.register(new InvestigationCommands(INVESTIGATIONS));
