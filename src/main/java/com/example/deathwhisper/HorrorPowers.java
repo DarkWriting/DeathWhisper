@@ -205,6 +205,25 @@ public final class HorrorPowers {
                     state.charges+" faster rushes available. Re-aim and use serum."),true);
                 return false;
             }
+            // In DBD the initial rush cannot attack; after at least one wall slam,
+            // a Lethal Rush can injure a target. Minecraft maps this to contact.
+            if(state.used>=2){
+                var targets=level.getEntitiesOfClass(LivingEntity.class,
+                    player.getBoundingBox().inflate(1.1),
+                    target->PowerFramework.canAffect(player,target) &&
+                        target.getEyePosition().subtract(player.getEyePosition()).dot(state.direction)>-.5);
+                if(!targets.isEmpty()){
+                    LivingEntity victim=targets.get(0);
+                    int amount=Mth.clamp(level.getGameRules().getInt(WhisperRules.RUSH_LETHAL_DAMAGE),1,20);
+                    if(victim.hurt(player.damageSources().playerAttack(player),amount)){
+                        level.playSound(null,player.blockPosition(),
+                            net.minecraft.sounds.SoundEvents.ANVIL_LAND,
+                            net.minecraft.sounds.SoundSource.PLAYERS,.6f,1.7f);
+                        fatigue(player,state,"Lethal Rush hit "+victim.getName().getString()+".");
+                        return true;
+                    }
+                }
+            }
             Vec3 direction=state.direction;
             player.setDeltaMovement(direction.x*state.speed,
                 Math.max(.045,direction.y*state.speed*.5),direction.z*state.speed);
