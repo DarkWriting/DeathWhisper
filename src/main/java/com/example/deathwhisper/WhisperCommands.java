@@ -111,6 +111,9 @@ public final class WhisperCommands {
             .then(Commands.literal("scan").then(Commands.argument("door",IntegerArgumentType.integer(1,12))
                 .executes(c->SecurityDoorController.scan(c.getSource().getPlayerOrException(),
                     IntegerArgumentType.getInteger(c,"door")))))
+            .then(Commands.literal("view").then(Commands.argument("door",IntegerArgumentType.integer(1,12))
+                .executes(c->SecurityDoorController.viewCamera(c.getSource().getPlayerOrException(),
+                    IntegerArgumentType.getInteger(c,"door")))))
             .then(Commands.literal("travel").then(Commands.argument("door",IntegerArgumentType.integer(1,12))
                 .executes(c->SecurityDoorController.travel(c.getSource().getPlayerOrException(),
                     IntegerArgumentType.getInteger(c,"door")))))
