@@ -91,6 +91,8 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.IntegerValue> CROW_RANGE = integer("CrowRange",28);
     public static final GameRules.Key<GameRules.IntegerValue> CROW_REVEAL_SECONDS = integer("CrowRevealSeconds",9);
     public static final GameRules.Key<GameRules.IntegerValue> CROW_SPEED = integer("CrowSpeed",105);
+    public static final GameRules.Key<GameRules.IntegerValue> CROW_SWARM_SECONDS = integer("CrowSwarmSeconds",9);
+    public static final GameRules.Key<GameRules.IntegerValue> CROW_REPEL_TICKS = integer("CrowRepelTicks",100);
 
     // Living Harpoon is strictly player-only, independently opt-in.
     public static final GameRules.Key<GameRules.BooleanValue> HARPOON_PVP=bool("HarpoonPvp",false);
