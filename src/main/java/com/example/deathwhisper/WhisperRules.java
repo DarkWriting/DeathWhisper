@@ -112,6 +112,8 @@ public final class WhisperRules {
     // Player-owned existing iron-door network: only loaded same-dimension destinations.
     public static final GameRules.Key<GameRules.BooleanValue> SECURITY_ENABLED=bool("SecurityEnabled",true);
     public static final GameRules.Key<GameRules.BooleanValue> SECURITY_TRAVEL=bool("SecurityTravel",false);
+    public static final GameRules.Key<GameRules.BooleanValue> SECURITY_CAMERA_ENABLED=bool("SecurityCameraEnabled",false);
+    public static final GameRules.Key<GameRules.IntegerValue> SECURITY_CAMERA_RANGE=integer("SecurityCameraRange",80);
     public static final GameRules.Key<GameRules.IntegerValue> SECURITY_MAX_DOORS=integer("SecurityMaxDoors",8);
     public static final GameRules.Key<GameRules.IntegerValue> SECURITY_SCAN_RADIUS=integer("SecurityScanRadius",8);
     // Non-destructive co-op investigations; world-saved gamerules.
