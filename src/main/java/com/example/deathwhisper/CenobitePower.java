@@ -92,10 +92,10 @@ public final class CenobitePower implements SupernaturalAbility {
         ServerLevel level=p.serverLevel();
         long now=p.getServer().overworld().getGameTime();
         Gateway g=gateways.remove(p.getUUID());
-        if(g!=null && now<=g.expires && g.dimension==level.d        if(g!=null && now<=g.expires && g.dimension==level.dimension()){
+        if(g!=null && now<=g.expires && g.dimension==level.dimension()){
             return launch(p,g,p.getLookAngle().normalize(),now);
         }
-perRules.CHAINS_RANGE),5,25);
+        int range=Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAINS_RANGE),5,25);
         Vec3 eye=p.getEyePosition();
         Vec3 end=eye.add(p.getLookAngle().scale(range));
         var block=level.clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,p));
