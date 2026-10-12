@@ -24,6 +24,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class DeathWhisper {
     public static final String ID = "deathwhisper";
     public static final HorrorPowers POWERS = new HorrorPowers();
+    public static final CenobitePower CENOBITE = new CenobitePower();
     public static final PowerFramework FRAMEWORK = new PowerFramework(POWERS);
     public static final InvestigationManager INVESTIGATIONS = new InvestigationManager();
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(ID);
@@ -33,6 +34,8 @@ public final class DeathWhisper {
         BlockBehaviour.Properties.of().strength(1.4f).sound(SoundType.METAL).noOcclusion());
     public static final net.neoforged.neoforge.registries.DeferredItem<BlockItem> MOTION_SENSOR_ITEM=
         ITEMS.registerSimpleBlockItem(MOTION_SENSOR_BLOCK);
+    public static final net.neoforged.neoforge.registries.DeferredItem<LamentConfiguration> LAMENT_CONFIGURATION =
+        ITEMS.registerItem("lament_configuration",LamentConfiguration::new,new Item.Properties().stacksTo(1));
     public static final net.neoforged.neoforge.registries.DeferredItem<ChainPuzzleBox> CHAIN_BOX =
         ITEMS.registerItem("chain_puzzle_box",ChainPuzzleBox::new,new Item.Properties().stacksTo(1));
     public static final net.neoforged.neoforge.registries.DeferredItem<BlightSerum> RUSH_SERUM =
@@ -93,6 +96,7 @@ public final class DeathWhisper {
     private void addCreativeItems(BuildCreativeModeTabContentsEvent event) {
         if(event.getTabKey()==CreativeModeTabs.COMBAT) {
             event.accept(CHAIN_BOX.get());
+            event.accept(LAMENT_CONFIGURATION.get());
             event.accept(RUSH_SERUM.get());
             event.accept(GHOST_MASK.get());
             event.accept(ARTIST_FEATHER.get());
