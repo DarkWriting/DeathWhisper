@@ -98,9 +98,24 @@ public final class CenobitePower implements SupernaturalAbility {
             level.playSound(null,BlockPos.containing(g.point),SoundEvents.CHAIN_PLACE,
                 SoundSource.PLAYERS,1.2f,.8f);
             p.displayClientMessage(Component.literal("Possessed chain launched. Keep aiming to steer it."),true);
-            if(level.getGameRules().getBoolean(WhisperRules.CHAIN_HUNTS_ENABLED))
-                hunts.computeIfAbsent(p.getUUID(),id->new Hunt(p.getUUID(),level.dimension(),
-                    now,20L*Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAIN_HUNT_DELAY),15,180)));
+            if(level.getGameRules().getBoolean(WhisperRules.CHAIN_HUNTS_ENABLED)
+                && !hunts.containsKey(p.getUUID())){
+                hunts.put(p.getUUID(),new Hunt(p.getUUID(),level.dimension(),now,
+                    20L*Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAIN_HUNT_DELAY),15,180)));
+                // A real discoverable world item provides counterplay, instead of an
+                // unavoidable passive curse. It uses vanilla item-entity persistence.
+                Vec3 drop=p.position().add(p.getLookAngle().multiply(-3,0,-3));
+                BlockPos location=BlockPos.containing(drop);
+                if(level.hasChunkAt(location)){
+                    var item=new net.minecraft.world.entity.item.ItemEntity(level,
+                        drop.x,p.getY()+.4,drop.z,
+                        new net.minecraft.world.item.ItemStack(DeathWhisper.LAMENT_CONFIGURATION.get()));
+                    item.setPickUpDelay(20);
+                    level.addFreshEntity(item);
+                    p.sendSystemMessage(Component.literal("§5The Lament Configuration has appeared nearby. "+
+                        "Recover and solve it before the Chain Hunt begins."));
+                }
+            }
             return true;
         }
         int range=Mth.clamp(level.getGameRules().getInt(WhisperRules.CHAINS_RANGE),5,25);
