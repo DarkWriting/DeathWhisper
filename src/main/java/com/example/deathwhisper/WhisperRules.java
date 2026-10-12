@@ -100,6 +100,7 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.IntegerValue> HARPOON_COOLDOWN=integer("HarpoonCooldown",16);
     public static final GameRules.Key<GameRules.IntegerValue> HARPOON_SECONDS=integer("HarpoonSeconds",3);
     public static final GameRules.Key<GameRules.IntegerValue> HARPOON_PULL=integer("HarpoonPull",24);
+    public static final GameRules.Key<GameRules.IntegerValue> HARPOON_BREAK_TICKS=integer("HarpoonBreakTicks",35);
     // Slasher: invisibility, private footprint tracking and optional second-use lunge.
     public static final GameRules.Key<GameRules.IntegerValue> SLASHER_COOLDOWN=integer("SlasherCooldown",26);
     public static final GameRules.Key<GameRules.IntegerValue> SLASHER_SECONDS=integer("SlasherSeconds",12);
