@@ -1,110 +1,198 @@
 package com.example.deathwhisper;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.level.ClipContext;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.HitResult;
 
-/**
- * Artist-inspired supernatural crows. Server-tracked wing-shaped smoke wisps
- * home toward living entities and reveal those they strike. No chunk tickets,
- * permanent entities or client packets: bounded visuals use vanilla particles.
- */
+/** Artist-inspired placed Dire Crows, directed flights and counterable crow swarms. */
 public final class ArtistPower implements SupernaturalAbility {
+    private record Placement(Vec3 pos,Vec3 direction){}
+    private static final class Nest {
+        final ResourceKey<Level> dimension;
+        final List<Placement> birds=new ArrayList<>();
+        long expires;
+        Nest(ResourceKey<Level> d,long expiry){dimension=d;expires=expiry;}
+    }
     private static final class Crow {
-        final UUID owner; final ResourceKey<Level> dimension;
-        Vec3 pos, velocity; int ticks=0;
+        final UUID owner;
+        final ResourceKey<Level> dimension;
+        Vec3 pos,velocity;
+        int ticks;
+        double travelled;
         Crow(UUID owner,ResourceKey<Level> dimension,Vec3 pos,Vec3 velocity){
             this.owner=owner;this.dimension=dimension;this.pos=pos;this.velocity=velocity;
         }
     }
+    private static final class Swarm {
+        final UUID owner;
+        final ResourceKey<Level> dimension;
+        long expires;
+        int repelTicks;
+        Swarm(UUID owner,ResourceKey<Level> d,long expires){
+            this.owner=owner;dimension=d;this.expires=expires;
+        }
+    }
+    private final Map<UUID,Nest> nests=new HashMap<>();
     private final List<Crow> flying=new ArrayList<>();
+    private final Map<UUID,Swarm> swarmed=new HashMap<>();
     @Override public String id(){return "ink_feather";}
     @Override public int cooldownTicks(ServerPlayer p){
         return 20*Mth.clamp(p.level().getGameRules().getInt(WhisperRules.CROW_COOLDOWN),2,120);
     }
-    @Override public boolean activate(ServerPlayer p){
-        if(flying.size()>=48)return false; // Keep per-server swarms bounded.
-        int count=Mth.clamp(p.level().getGameRules().getInt(WhisperRules.CROW_COUNT),1,5);
-        double speed=Mth.clamp(p.level().getGameRules().getInt(WhisperRules.CROW_SPEED),50,200)/100.0;
-        Vec3 facing=p.getLookAngle().normalize();
-        Vec3 sideways=new Vec3(-facing.z,0,facing.x).normalize();
-        for(int i=0;i<count;i++){
-            double offset=i-(count-1)/2.0;
-            Vec3 start=p.getEyePosition().add(facing.scale(1.2)).add(sideways.scale(offset*.55));
-            Vec3 velocity=facing.add(sideways.scale(offset*.065)).normalize().scale(speed);
-            flying.add(new Crow(p.getUUID(),p.level().dimension(),start,velocity));
+    @Override public boolean hasRecastStage(){return true;}
+    @Override public boolean allowRecastOnCooldown(ServerPlayer p){
+        Nest n=nests.get(p.getUUID());
+        return n!=null && n.dimension==p.level().dimension()
+            && p.getServer().overworld().getGameTime()<=n.expires;
+    }
+    @Override public boolean activate(ServerPlayer player){
+        ServerLevel level=player.serverLevel();
+        long now=player.getServer().overworld().getGameTime();
+        Nest nest=nests.get(player.getUUID());
+        if(nest==null || now>nest.expires || nest.dimension!=level.dimension()){
+            nest=new Nest(level.dimension(),now+240);
+            nests.put(player.getUUID(),nest);
         }
-        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.PHANTOM_FLAP,SoundSource.PLAYERS,1.3f,1.3f);
-        p.displayClientMessage(Component.literal(count+" ink crows unleashed"),true);
+        int maximum=Mth.clamp(level.getGameRules().getInt(WhisperRules.CROW_COUNT),1,3);
+        // Sneak-use or next click after filling the nest releases every placed crow.
+        if((player.isShiftKeyDown() && !nest.birds.isEmpty()) || nest.birds.size()>=maximum){
+            if(flying.size()+nest.birds.size()>48)return false;
+            double speed=Mth.clamp(level.getGameRules().getInt(WhisperRules.CROW_SPEED),50,200)/100.0;
+            for(Placement placed:nest.birds){
+                flying.add(new Crow(player.getUUID(),level.dimension(),placed.pos,
+                    placed.direction.normalize().scale(speed)));
+                level.sendParticles(ParticleTypes.SQUID_INK,placed.pos.x,placed.pos.y,placed.pos.z,
+                    12,.25,.3,.25,.025);
+            }
+            int count=nest.birds.size();
+            nests.remove(player.getUUID());
+            level.playSound(null,player.blockPosition(),SoundEvents.PHANTOM_FLAP,
+                SoundSource.PLAYERS,1.3f,.85f);
+            player.displayClientMessage(Component.literal(count+" Dire Crows launched along their aimed flight paths."),true);
+            return true;
+        }
+        Vec3 forward=player.getLookAngle().normalize();
+        Vec3 pos=player.getEyePosition().add(forward.scale(1.3));
+        if(!level.hasChunkAt(BlockPos.containing(pos)))return false;
+        nest.birds.add(new Placement(pos,forward));
+        level.sendParticles(ParticleTypes.SQUID_INK,pos.x,pos.y,pos.z,12,.18,.25,.18,.01);
+        player.displayClientMessage(Component.literal("Placed crow "+nest.birds.size()+"/"+maximum+
+            ". Place another, or SNEAK-use to launch them."),true);
         return true;
     }
-    @Override public void serverTick(MinecraftServer server){
-        Iterator<Crow> iterator=flying.iterator();
-        while(iterator.hasNext()){
-            Crow crow=iterator.next();
-            ServerPlayer owner=server.getPlayerList().getPlayer(crow.owner);
-            ServerLevel level=server.getLevel(crow.dimension);
-            if(owner==null || level==null || owner.level()!=level || !owner.isAlive() ||
-                 !level.getGameRules().getBoolean(WhisperRules.POWERS_ENABLED)){iterator.remove();continue;}
-            int limit=Mth.clamp(level.getGameRules().getInt(WhisperRules.CROW_RANGE),8,48);
-            if(++crow.ticks>limit*2 || crow.pos.distanceToSqr(owner.getEyePosition())>limit*limit
-                   || !level.hasChunkAt(net.minecraft.core.BlockPos.containing(crow.pos))){iterator.remove();continue;}
-            // Small bounded target scan around each crow, avoiding whole-world lookups.
-            List<LivingEntity> candidates=level.getEntitiesOfClass(LivingEntity.class,
-                new net.minecraft.world.phys.AABB(crow.pos,crow.pos).inflate(7.0),
-                e->PowerFramework.canAffect(owner,e)&&e.distanceToSqr(crow.pos)<49);
-            LivingEntity nearest=null;
-            double best=49;
-            for(var target:candidates){
-                double dist=target.getEyePosition().distanceToSqr(crow.pos);
-                if(dist<best){best=dist;nearest=target;}
-            }
-            if(nearest!=null && best>0.01) {
-                Vec3 toward=nearest.getEyePosition().subtract(crow.pos).normalize();
-                crow.velocity=crow.velocity.scale(.87).add(toward.scale(.13*crow.velocity.length())).normalize().scale(crow.velocity.length());
-            }
-            Vec3 next=crow.pos.add(crow.velocity.scale(2)); // serverTick runs every 2 ticks
-            HitResult block=level.clip(new ClipContext(crow.pos,next,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,owner));
-            if(block.getType()!=HitResult.Type.MISS){splash(level,crow.pos);iterator.remove();continue;}
-            crow.pos=next;
-            if(nearest!=null && nearest.getEyePosition().distanceToSqr(crow.pos)<2.8) {
-                int glow=20*Mth.clamp(level.getGameRules().getInt(WhisperRules.CROW_REVEAL_SECONDS),2,30);
-                nearest.addEffect(new MobEffectInstance(MobEffects.GLOWING,glow,0,false,true,true));
-                nearest.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,35,0,false,true,true));
-                splash(level,crow.pos);
-                owner.displayClientMessage(Component.literal("Crow revealed "+nearest.getDisplayName().getString()),true);
-                iterator.remove();continue;
-            }
-            // Feathered silhouette: dense core and two flickering black-smoke wing tips.
-            Vec3 side=new Vec3(-crow.velocity.z,0,crow.velocity.x).normalize();
-            double wing=Math.sin(crow.ticks*.83)*.36;
-            level.sendParticles(ParticleTypes.SQUID_INK,crow.pos.x,crow.pos.y,crow.pos.z,2,.08,.09,.08,0);
-            Vec3 left=crow.pos.add(side.scale(.43)).add(0,wing,0);
-            Vec3 right=crow.pos.subtract(side.scale(.43)).add(0,-wing,0);
-            level.sendParticles(ParticleTypes.SMOKE,left.x,left.y,left.z,1,0,0,0,0);
-            level.sendParticles(ParticleTypes.SMOKE,right.x,right.y,right.z,1,0,0,0,0);
+    private void affect(ServerLevel level,ServerPlayer caster,LivingEntity target,boolean closeFlight,long now){
+        Swarm existing=swarmed.get(target.getUUID());
+        if(closeFlight || (existing!=null && now<existing.expires && existing.dimension==level.dimension())){
+            // A fresh Dire Crow crossing its direct flight path can injure; after
+            // that, a second hit is needed to injure a previously swarmed target.
+            target.hurt(caster.damageSources().magic(),4f);
+            swarmed.remove(target.getUUID());
+            level.sendParticles(ParticleTypes.SQUID_INK,target.getX(),target.getY()+1,target.getZ(),
+                20,.3,.4,.3,.04);
+        }else{
+            swarmed.put(target.getUUID(),new Swarm(caster.getUUID(),level.dimension(),
+                now+20L*Mth.clamp(level.getGameRules().getInt(WhisperRules.CROW_SWARM_SECONDS),4,18)));
+            target.addEffect(new MobEffectInstance(MobEffects.GLOWING,120,0,false,true,true));
+            caster.displayClientMessage(Component.literal("Crows swarming "+target.getName().getString()+
+                " — hit again to injure."),true);
         }
     }
-    private static void splash(ServerLevel level,Vec3 point){
-        level.sendParticles(ParticleTypes.SQUID_INK,point.x,point.y,point.z,13,.24,.2,.24,.035);
-        level.playSound(null,net.minecraft.core.BlockPos.containing(point),SoundEvents.PHANTOM_FLAP,
-            SoundSource.PLAYERS,.45f,.75f);
+    @Override public void serverTick(MinecraftServer server){
+        long now=server.overworld().getGameTime();
+        nests.entrySet().removeIf(e->{
+            Nest nest=e.getValue();
+            ServerPlayer p=server.getPlayerList().getPlayer(e.getKey());
+            if(p==null || !p.isAlive() || p.level().dimension()!=nest.dimension || now>nest.expires)return true;
+            if(now%10==0)for(Placement place:nest.birds){
+                p.serverLevel().sendParticles(ParticleTypes.SQUID_INK,
+                    place.pos.x,place.pos.y,place.pos.z,3,.12,.2,.12,0);
+            }
+            return false;
+        });
+        Iterator<Crow> flight=flying.iterator();
+        while(flight.hasNext()){
+            Crow crow=flight.next();
+            ServerPlayer owner=server.getPlayerList().getPlayer(crow.owner);
+            ServerLevel level=server.getLevel(crow.dimension);
+            if(owner==null || level==null || !owner.isAlive() || owner.level()!=level ||
+                !level.getGameRules().getBoolean(WhisperRules.POWERS_ENABLED)){
+                flight.remove();continue;
+            }
+            int range=Mth.clamp(level.getGameRules().getInt(WhisperRules.CROW_RANGE),8,48);
+            if(crow.travelled>=range || crow.ticks++>range*2){flight.remove();continue;}
+            Vec3 end=crow.pos.add(crow.velocity.scale(2));
+            if(!level.hasChunkAt(BlockPos.containing(end))){flight.remove();continue;}
+            boolean closeFlight=crow.travelled<8;
+            if(closeFlight) {
+                var collision=level.clip(new ClipContext(crow.pos,end,
+                    ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,owner));
+                if(collision.getType()!=HitResult.Type.MISS) {
+                    // After the direct flight path, swarms pass through obstacles.
+                    // At a wall the direct-hit phase is lost, not the projectile.
+                    closeFlight=false;
+                }
+            }
+            LivingEntity hit=null;
+            double nearest=Double.POSITIVE_INFINITY;
+            for(LivingEntity candidate:level.getEntitiesOfClass(LivingEntity.class,
+                new AABB(crow.pos,end).inflate(.85),e->PowerFramework.canAffect(owner,e))){
+                var intersection=candidate.getBoundingBox().inflate(.12).clip(crow.pos,end);
+                if(intersection.isEmpty())continue;
+                double d=crow.pos.distanceToSqr(intersection.get());
+                if(d<nearest){nearest=d;hit=candidate;}
+            }
+            if(hit!=null){
+                affect(level,owner,hit,closeFlight,now);
+                flight.remove();continue;
+            }
+            Vec3 side=new Vec3(-crow.velocity.z,0,crow.velocity.x).normalize();
+            double wing=Math.sin(crow.ticks*.75)*.32;
+            for(int i=0;i<5;i++){
+                Vec3 v=crow.pos.lerp(end,i/4.0);
+                level.sendParticles(ParticleTypes.SQUID_INK,v.x,v.y,v.z,1,0,0,0,0);
+            }
+            for(int sign:new int[]{-1,1}){
+                Vec3 wingtip=end.add(side.scale(sign*.45)).add(0,sign*wing,0);
+                level.sendParticles(ParticleTypes.SMOKE,wingtip.x,wingtip.y,wingtip.z,1,0,0,0,0);
+            }
+            crow.pos=end;
+            crow.travelled+=crow.velocity.length()*2;
+        }
+        swarmed.entrySet().removeIf(e->{
+            Swarm s=e.getValue();
+            ServerLevel level=server.getLevel(s.dimension);
+            if(level==null || now>s.expires)return true;
+            var victim=level.getEntity(e.getKey());
+            if(!(victim instanceof LivingEntity entity) || !entity.isAlive())return true;
+            if(entity instanceof ServerPlayer p){
+                if(!level.getGameRules().getBoolean(WhisperRules.POWERS_PVP))return true;
+                if(p.isShiftKeyDown()){
+                    s.repelTicks+=2;
+                    if(s.repelTicks>=Mth.clamp(level.getGameRules().getInt(WhisperRules.CROW_REPEL_TICKS),20,200)){
+                        p.displayClientMessage(Component.literal("You repelled the crow swarm."),true);
+                        return true;
+                    }
+                }else s.repelTicks=0;
+            }
+            if(now%10==0)level.sendParticles(ParticleTypes.SQUID_INK,
+                entity.getX(),entity.getY()+1,entity.getZ(),4,.35,.5,.35,.02);
+            return false;
+        });
     }
 }
