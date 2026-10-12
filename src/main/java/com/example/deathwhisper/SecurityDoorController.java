@@ -124,7 +124,9 @@ public final class SecurityDoorController extends Item {
                 .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,"/deathwhispersecurity scan "+n)));
             Component travel=Component.literal(" [TRAVEL]").withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN)
                 .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,"/deathwhispersecurity travel "+n)));
-            p.sendSystemMessage(prefix.copy().append(scan).append(travel));
+            Component view=Component.literal(" [CAMERA]").withStyle(Style.EMPTY.withColor(ChatFormatting.LIGHT_PURPLE)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,"/deathwhispersecurity view "+n)));
+            p.sendSystemMessage(prefix.copy().append(scan).append(view).append(travel));
         }
         p.sendSystemMessage(Component.literal("Travel: stand near any registered iron door in the same dimension."));
     }
@@ -137,6 +139,78 @@ public final class SecurityDoorController extends Item {
         p.sendSystemMessage(Component.literal("Removed door "+index+" from the network."));
         return 1;
     }
+    /** Live client POV is available only for locally loaded, registered doors. */
+    public static int viewCamera(ServerPlayer player,int number){
+        if(!holding(player) || !player.isAlive())return 0;
+        var rules=player.serverLevel().getGameRules();
+        if(!rules.getBoolean(WhisperRules.SECURITY_ENABLED) ||
+            !rules.getBoolean(WhisperRules.SECURITY_CAMERA_ENABLED)){
+            player.sendSystemMessage(Component.literal(
+                "Security cameras disabled. Admin: /gamerule deathWhisperSecurityCameraEnabled true"));
+            return 0;
+        }
+        ListTag saved=list(player);
+        if(number<1 || number>saved.size())return 0;
+        String dim=player.level().dimension().location().toString();
+        boolean nearSource=false;
+        for(int i=0;i<saved.size();i++){
+            CompoundTag candidate=saved.getCompound(i);
+            if(!candidate.getString("dimension").equals(dim))continue;
+            BlockPos source=position(candidate);
+            if(player.distanceToSqr(source.getX()+.5,source.getY()+.5,source.getZ()+.5)<25
+                && player.level().hasChunkAt(source)
+                && player.level().getBlockState(source).is(Blocks.IRON_DOOR)){
+                nearSource=true;break;
+            }
+        }
+        if(!nearSource){
+            player.sendSystemMessage(Component.literal(
+                "Stand within five blocks of a registered iron door to use the camera network."));
+            return 0;
+        }
+        CompoundTag door=saved.getCompound(number-1);
+        if(!door.getString("dimension").equals(dim)){
+            player.sendSystemMessage(Component.literal("Camera offline: different dimension."));
+            return 0;
+        }
+        BlockPos pos=position(door);
+        int range=Mth.clamp(rules.getInt(WhisperRules.SECURITY_CAMERA_RANGE),16,112);
+        // Vanilla sends world chunks around player, not around a spectator camera.
+        // Range is capped to avoid showing remote black/unloaded sections.
+        range=Math.min(range,Math.max(16,(player.getServer().getPlayerList().getViewDistance()-2)*16));
+        if(player.distanceToSqr(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5)>range*range){
+            player.sendSystemMessage(Component.literal(
+                "Camera offline: "+number+" is outside loaded viewing radius ("+range+" blocks)."));
+            return 0;
+        }
+        if(!player.level().hasChunkAt(pos) || !player.level().getBlockState(pos).is(Blocks.IRON_DOOR)){
+            player.sendSystemMessage(Component.literal("Camera offline: door is missing or chunk isn't loaded."));
+            return 0;
+        }
+        if(!spend(player,10))return 0;
+        var block=player.level().getBlockState(pos);
+        var face=block.getValue(net.minecraft.world.level.block.DoorBlock.FACING);
+        var bottom=block.getValue(net.minecraft.world.level.block.DoorBlock.HALF)
+            ==net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER?
+            pos.below():pos;
+        // Outside doorway to avoid embedding the camera in the physical iron door.
+        var pivot=new net.minecraft.world.phys.Vec3(bottom.getX()+.5+face.getStepX()*1.1,
+            bottom.getY()+1.6,bottom.getZ()+.5+face.getStepZ()*1.1);
+        if(!player.level().hasChunkAt(BlockPos.containing(pivot)))return 0;
+        float yaw=(float)(Math.atan2(-face.getStepX(),face.getStepZ())*180/Math.PI);
+        CameraPackets.security(player,number,pivot,yaw);
+        return 1;
+    }
+    public static int switchCamera(ServerPlayer p,int original,int step){
+        ListTag links=list(p);
+        if(links.isEmpty())return 0;
+        int candidate=Math.floorMod((original-1)+step,links.size())+1;
+        return viewCamera(p,candidate);
+    }
+    private static BlockPos position(CompoundTag link){
+        return new BlockPos(link.getInt("x"),link.getInt("y"),link.getInt("z"));
+    }
+
     public static int scan(ServerPlayer p,int index) {
         if(!holding(p)||!p.level().getGameRules().getBoolean(WhisperRules.SECURITY_ENABLED))return 0;
         ListTag saved=list(p);
