@@ -60,6 +60,7 @@ public final class WhisperRules {
 
     public static final GameRules.Key<GameRules.BooleanValue> POWERS_ENABLED = bool("PowersEnabled", true);
     public static final GameRules.Key<GameRules.BooleanValue> POWERS_PVP = bool("PowersPvp", false);
+    public static final GameRules.Key<GameRules.BooleanValue> POWERS_AFFECT_PIXELMON = bool("PowersAffectPixelmon", false);
     public static final GameRules.Key<GameRules.IntegerValue> CHAINS_RANGE = integer("ChainsRange", 22);
     public static final GameRules.Key<GameRules.IntegerValue> CHAINS_SECONDS = integer("ChainsSeconds", 4);
     public static final GameRules.Key<GameRules.IntegerValue> CHAINS_COOLDOWN = integer("ChainsCooldown", 18);
