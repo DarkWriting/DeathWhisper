@@ -400,3 +400,40 @@ The existing registered iron-door system still offers text-based status snapshot
 Start with a backup and a controlled test world. Test the Cenobite with one hostile mob, then two PvP-consenting players; verify all three individual crouch-breaks and six-second puzzle solving. Test Artist with two consecutive crow flights, then Ghost Face with two players who can reveal each other. Confirm harpoon does not grab any mob and that its projectile can miss. Try the Blight first rush vs second rush to verify only the latter can damage. Confirm no Pokémon are affected with the new default protection gamerule.
 
 The version **compiles through GitHub Actions**, but all client animations and gameplay counterplay require real in-game verification. Never enable security travel or combat PvP in protected production claims without multiplayer testing.
+
+
+
+## v0.10.0 — live Cenobite gateway POV and Animatronic security cameras
+
+**True local render camera:** These modes switch the client's render viewpoint to a temporary, client-only camera pawn without moving the server-side player. Unlike the old text scanner, the camera draws the real Minecraft world, entities and lighting **if the target chunks have already streamed to that client**. Nothing is secretly teleported or chunkloaded. All commands and target locations are validated on the server.
+
+### Cenobite: possessed-chain gateway POV
+
+1. Give yourself \`/give @s deathwhisper:chain_puzzle_box\`.
+2. Look toward loaded ground within 5–25 blocks and **right-click**. A portal/gateway appears and switches you to a view from that location.
+3. Move your mouse or use the arrow keys to aim. Press **F**, **Space**, or **left-click** to fire the possessed chain.
+4. Your camera follows the chain briefly, and mouse aiming steers it, separate from your player's body and head angle.
+5. Press **X** or **ESC** to abandon the view and restore your normal camera. The chain's existing hit/three-binding/Chain Hunt mechanics remain.
+
+### The Animatronic: live security-door network
+
+1. Sneak-right-click two or more **iron doors** with \`/give @s deathwhisper:security_door_controller\` to register them.
+2. Server administrators must opt in to visual surveillance, which can expose activity on protected claims:
+   \`\`\`mcfunction
+   /gamerule deathWhisperSecurityCameraEnabled true
+   /gamerule deathWhisperSecurityCameraRange 80
+   \`\`\`
+3. Stand within 5 blocks of **one of your registered iron doors** and right-click air. Each linked entry now has a **[CAMERA]** chat action; alternatively use \`/deathwhispersecurity view 1\`.
+4. A client-side camera appears just outside the selected door with actual nearby live rendered scenery. You can move the mouse or press arrow keys to pan; press **N** or **P** to cycle linked doors. **ESC/X** exits to your player.
+5. Camera viewing and scanning consume 10% of battery per activation. The battery refills over time. Travel still costs 40% and remains **disabled by default**.
+
+### Rendering and protection limits
+
+- **Only currently client-loaded chunks** can be seen. Server-side loaded chunks are not enough if your client is outside render range. A remote linked door outside the configured maximum or the server view-distance limit is shown as OFFLINE rather than teleporting the player.
+- The player's actual body stays at its original location and remains physically vulnerable; opening a camera does not confer invulnerability.
+- Camera views are not a replacement for cross-dimension cameras, chunk-forced CCTV, or a secondary independent render pipeline. A full remote world-feed system would need a custom chunk stream or isolated remote renderer.
+- Security cameras are **OFF** by default until a server operator enables them; this is important on servers with private builds or Open Parties and Claims. A player must be nearby a door they themselves registered to activate the camera network.
+- The camera GUI intercepts movement keys so your body does not wander while browsing camera views. It is still wise to test on flat safe terrain.
+- The mod does not yet integrate OPAC claim permission APIs. Never enable visual surveillance on private server builds without the affected players' consent.
+
+Use the same v0.10.0 JAR on both NeoForge clients and server. Test singleplayer or with a trusted co-op player before deploying to a populated multiplayer server. CI proves compilation, **not** correct camera rendering in gameplay.
