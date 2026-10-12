@@ -81,6 +81,9 @@ public final class PowerFramework {
         if(target==source || target instanceof WatcherEntity || target instanceof GhostApparition
             || !target.isAlive() || target.isSpectator())
             return false;
+        if(target.getType().builtInRegistryHolder().key().location().getNamespace().equals("pixelmon")
+            && !source.serverLevel().getGameRules().getBoolean(WhisperRules.POWERS_AFFECT_PIXELMON))
+            return false;
         if(target instanceof ServerPlayer player)
             return source.serverLevel().getGameRules().getBoolean(WhisperRules.POWERS_PVP)
                 && !player.isSpectator() && !player.isCreative();
