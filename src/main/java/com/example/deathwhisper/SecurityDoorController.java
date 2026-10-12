@@ -30,6 +30,33 @@ import java.util.*;
  */
 public final class SecurityDoorController extends Item {
     private static final String KEY="deathwhisper_security_doors";
+    private static final String ENERGY="deathwhisper_security_battery";
+    private static final String ENERGY_TICK="deathwhisper_security_battery_timestamp";
+    private static int battery(ServerPlayer player){
+        var data=player.getPersistentData();
+        long now=player.getServer().overworld().getGameTime();
+        if(!data.contains(ENERGY)){
+            data.putInt(ENERGY,100);
+            data.putLong(ENERGY_TICK,now);
+            return 100;
+        }
+        long elapsed=Math.max(0,now-data.getLong(ENERGY_TICK));
+        int restored=(int)Math.min(100,elapsed/20);
+        if(restored>0){
+            data.putInt(ENERGY,Math.min(100,data.getInt(ENERGY)+restored));
+            data.putLong(ENERGY_TICK,now);
+        }
+        return data.getInt(ENERGY);
+    }
+    private static boolean spend(ServerPlayer player,int amount){
+        int left=battery(player);
+        if(left<amount){
+            player.sendSystemMessage(Component.literal("Security battery low: "+left+"% (need "+amount+"%). Recharges over time."));
+            return false;
+        }
+        player.getPersistentData().putInt(ENERGY,left-amount);
+        return true;
+    }
     public SecurityDoorController(Properties p){super(p);}
     private static ListTag list(ServerPlayer p){return p.getPersistentData().getList(KEY,Tag.TAG_COMPOUND);}
     public static boolean holding(ServerPlayer p){
@@ -83,7 +110,8 @@ public final class SecurityDoorController extends Item {
             p.displayClientMessage(Component.literal("Security network disabled."),true);return;
         }
         ListTag saved=list(p);
-        p.sendSystemMessage(Component.literal("§8[§5Security Door Network§8] §7"+saved.size()+" linked doors"));
+        p.sendSystemMessage(Component.literal("§8[§5Security Door Network§8] §7"+
+            saved.size()+" linked doors §b| battery "+battery(p)+"%"));
         if(saved.isEmpty()){
             p.sendSystemMessage(Component.literal("Sneak-right-click an iron door to register it."));
             return;
@@ -124,6 +152,7 @@ public final class SecurityDoorController extends Item {
         if(!p.level().getBlockState(pos).is(Blocks.IRON_DOOR)){
             p.sendSystemMessage(Component.literal("Camera offline: iron door missing."));return 0;
         }
+        if(!spend(p,10))return 0;
         int radius=Mth.clamp(p.level().getGameRules().getInt(WhisperRules.SECURITY_SCAN_RADIUS),3,12);
         AABB box=new AABB(pos).inflate(radius);
         int players=p.serverLevel().getEntitiesOfClass(ServerPlayer.class,box).size();
@@ -166,6 +195,7 @@ public final class SecurityDoorController extends Item {
             if(!p.level().hasChunkAt(stand))continue;
             if(p.level().getBlockState(stand).isAir()&&p.level().getBlockState(stand.above()).isAir()
                 &&p.level().getBlockState(stand.below()).isSolidRender(p.level(),stand.below())){
+                if(!spend(p,40))return 0;
                 p.teleportTo(stand.getX()+.5,stand.getY(),stand.getZ()+.5);
                 p.fallDistance=0;
                 p.displayClientMessage(Component.literal("Security transit complete."),true);
