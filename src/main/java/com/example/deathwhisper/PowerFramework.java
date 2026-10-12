@@ -23,13 +23,7 @@ public final class PowerFramework {
 
     public PowerFramework(HorrorPowers existing) {
         this.existing=existing;
-        register(new SupernaturalAbility() {
-            public String id(){return "chain_puzzle_box";}
-            public boolean activate(ServerPlayer p){return existing.fireChains(p)>0;}
-            public int cooldownTicks(ServerPlayer p){
-                return Math.max(1,p.level().getGameRules().getInt(WhisperRules.CHAINS_COOLDOWN))*20;
-            }
-        });
+        register(DeathWhisper.CENOBITE);
         register(new SupernaturalAbility() {
             public String id(){return "blight_serum";}
             public boolean activate(ServerPlayer p){return existing.useSerum(p);}
