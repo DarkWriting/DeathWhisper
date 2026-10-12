@@ -112,6 +112,22 @@ public final class CameraPackets {
         if(ACTIVE.remove(player.getUUID())!=null)
             send(player,new View("close",0,0,0,0,0,0));
     }
+    /** Drop stale sessions after timeout/disconnect; restore the client's normal POV. */
+    public static void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event){
+        if(event.getServer().getTickCount()%20!=0)return;
+        long now=event.getServer().overworld().getGameTime();
+        var expired=new java.util.ArrayList<UUID>();
+        for(var entry:ACTIVE.entrySet()){
+            ServerPlayer player=event.getServer().getPlayerList().getPlayer(entry.getKey());
+            Session session=entry.getValue();
+            if(player==null || !player.isAlive() || now>session.expires
+                || player.level().dimension()!=session.dimension){
+                if(player!=null)send(player,new View("close",0,0,0,0,0,0));
+                expired.add(entry.getKey());
+            }
+        }
+        for(UUID id:expired)ACTIVE.remove(id);
+    }
     private static void send(ServerPlayer p,View packet){
         PacketDistributor.sendToPlayer(p,packet);
     }
