@@ -77,15 +77,16 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.IntegerValue> RUSH_ACCELERATION = integer("RushAcceleration", 18);
     public static final GameRules.Key<GameRules.IntegerValue> RUSH_FATIGUE_TICKS = integer("RushFatigueTicks", 35);
     public static final GameRules.Key<GameRules.IntegerValue> RUSH_REBOUND_TICKS = integer("RushReboundTicks", 36);
+    public static final GameRules.Key<GameRules.IntegerValue> RUSH_LETHAL_DAMAGE = integer("RushLethalDamage", 6);
 
 
     // Ghost Face-inspired, original stealth-and-mark power.
     public static final GameRules.Key<GameRules.IntegerValue> GHOST_COOLDOWN = integer("GhostCooldown",30);
-    public static final GameRules.Key<GameRules.IntegerValue> GHOST_SHROUD_SECONDS = integer("GhostShroudSeconds",14);
-    public static final GameRules.Key<GameRules.IntegerValue> GHOST_MARK_TICKS = integer("GhostMarkTicks",44);
-    public static final GameRules.Key<GameRules.IntegerValue> GHOST_MARK_SECONDS = integer("GhostMarkSeconds",12);
+    public static final GameRules.Key<GameRules.IntegerValue> GHOST_SHROUD_SECONDS = integer("GhostShroudSeconds",25);
+    public static final GameRules.Key<GameRules.IntegerValue> GHOST_MARK_TICKS = integer("GhostMarkTicks",80);
+    public static final GameRules.Key<GameRules.IntegerValue> GHOST_MARK_SECONDS = integer("GhostMarkSeconds",60);
     public static final GameRules.Key<GameRules.IntegerValue> GHOST_RANGE = integer("GhostRange",22);
-    public static final GameRules.Key<GameRules.IntegerValue> GHOST_DAMAGE_BONUS = integer("GhostDamageBonus",35);
+    public static final GameRules.Key<GameRules.IntegerValue> GHOST_DAMAGE_BONUS = integer("GhostDamageBonus",200);
     // Artist-inspired homing ink-crows.
     public static final GameRules.Key<GameRules.IntegerValue> CROW_COOLDOWN = integer("CrowCooldown",16);
     public static final GameRules.Key<GameRules.IntegerValue> CROW_COUNT = integer("CrowCount",3);
