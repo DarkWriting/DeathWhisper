@@ -64,6 +64,10 @@ public final class WhisperRules {
     public static final GameRules.Key<GameRules.IntegerValue> CHAINS_SECONDS = integer("ChainsSeconds", 4);
     public static final GameRules.Key<GameRules.IntegerValue> CHAINS_COOLDOWN = integer("ChainsCooldown", 18);
     public static final GameRules.Key<GameRules.IntegerValue> CHAINS_TARGETS = integer("ChainsTargets", 3);
+    public static final GameRules.Key<GameRules.IntegerValue> CHAIN_SPEED = integer("ChainSpeed", 10);
+    public static final GameRules.Key<GameRules.IntegerValue> CHAIN_FLIGHT_TICKS = integer("ChainFlightTicks", 22);
+    public static final GameRules.Key<GameRules.BooleanValue> CHAIN_HUNTS_ENABLED = bool("ChainHuntsEnabled", true);
+    public static final GameRules.Key<GameRules.IntegerValue> CHAIN_HUNT_DELAY = integer("ChainHuntDelay", 90);
     public static final GameRules.Key<GameRules.IntegerValue> RUSH_SPEED = integer("RushSpeed", 115);
     public static final GameRules.Key<GameRules.IntegerValue> RUSH_CHARGES = integer("RushCharges", 5);
     public static final GameRules.Key<GameRules.IntegerValue> RUSH_TICKS = integer("RushTicks", 12);
