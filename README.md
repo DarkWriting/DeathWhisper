@@ -437,3 +437,22 @@ The version **compiles through GitHub Actions**, but all client animations and g
 - The mod does not yet integrate OPAC claim permission APIs. Never enable visual surveillance on private server builds without the affected players' consent.
 
 Use the same v0.10.0 JAR on both NeoForge clients and server. Test singleplayer or with a trusted co-op player before deploying to a populated multiplayer server. CI proves compilation, **not** correct camera rendering in gameplay.
+
+
+## v0.10.1 — gateway camera input and session fix
+
+This patch addresses a camera that got stuck or could not steer the possessed chain on NeoForge 1.21.1:
+
+- Camera screen now explicitly captures **relative mouse movement** through GLFW rather than relying on absolute GUI cursor coordinates which stop at screen edges.
+- The GUI's crosshair and yaw/pitch are independent of the player character. Look direction is sent to the server on every client tick, including **after firing**, and the chain turns toward that authoritative input.
+- The possessed chain advances once per server tick rather than skipping two blocks per update, retaining its intended range while offering enough time to aim and steer.
+- Exiting with **ESC** or **X** restores first-person camera, releases the cursor and cancels any in-progress owned gateway/chain. An independent client tick failsafe resets the view on death, disconnection or another GUI taking focus. Timeout also restores the player camera.
+- Network payloads now dispatch client camera changes on the client thread and control packets on the server thread.
+
+### Priority retest
+Use a nearby *client-loaded* area on level ground:
+```mcfunction
+/give @s deathwhisper:chain_puzzle_box
+/gamerule deathWhisperChainFlightTicks 35
+```
+Right-click to open the gateway. Move mouse continuously to look **all the way around**, press **F** (or left-click) to launch the chain, and continue moving the mouse to steer while flying. Press ESC or X to leave; confirm you regain ordinary Minecraft camera and mouse control every time. Try a second gateway after cooldown; repeat on multiplayer. This is a new camera implementation, so test in a spare world first.
