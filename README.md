@@ -319,3 +319,84 @@ Default settings: five rushes, base speed 1.15 blocks/tick, with +0.18 blocks/ti
 **Testing:** Rush across flat ground without a wall; wait for the dash to finish, confirm Slowness and Weakness are applied and further rushes are blocked by the normal cooldown. Then test against a solid wall: bump the wall, re-aim, rush again within 1.8 seconds, and repeat. Chat should show an increased speed on every successful chain. Confirm the third, fourth and fifth rush work, and that collisions never teleport through protected structures. Client speed and particle effects require actual gameplay testing.
 
 Other DBD-style tuning included: the Shrouded Mask mark checks actual target hitboxes (not just the eye position); the player-only Living Harpoon selects its target by ray intersection with player hitboxes; the Security Door Controller supports `/deathwhispersecurity unlink <number>` for stale door links. Door travel remains disabled by default until claims protection can be validated.
+
+
+## v0.9.0 — DBD-inspired powers identity overhaul (experimental)
+
+This is a mechanic-inspired adaptation of killer powers; it uses original synthesized audio and pixel textures, not copied Dead by Daylight assets. All combat interactions follow \`deathWhisperPowersPvp false\` by default and now **ignore Pixelmon entities** unless \`deathWhisperPowersAffectPixelmon true\`. Lament Configuration hunts and particle projectiles do not chunk-load or alter protected blocks.
+
+### Cenobite / Summons of Pain
+
+- Existing \`deathwhisper:chain_puzzle_box\` now provides *two-stage interaction*: **right-click** to conjure a visible gateway at a point along your aim; **right-click again** within six seconds to launch a single possessed chain from the gateway.
+- The launched chain is steerable by looking around. Guidance is based on the caster's camera/look direction; it does **not** move the player's viewpoint into the gateway (that would require a custom client/network camera).
+- Hit targets receive **three individual chains**, greatly reduced movement speed, and a finite binding timer. Players hold **SNEAK** for a second per chain to break free. Mobs automatically shed chains gradually.
+- Each fired possessed chain arms a **Chain Hunt** (90 seconds by default); a separate Lament Configuration item drops nearby. When the hunt starts, periodic spectral chains bind nearby eligible mobs and, if PvP is enabled, players.
+- Find and hold the \`deathwhisper:lament_configuration\`, **sneak + right-click while holding it**, then stay crouched and almost stationary for six seconds to solve it, cancel hunts and remove bindings in that dimension.
+- The puzzle does not naturally appear on world creation as in Dead by Daylight; one appears when a caster arms a hunt. The hunt follows the caster while they remain online, rather than creating permanent world ghosts.
+
+\`\`\`mcfunction
+/give @s deathwhisper:chain_puzzle_box
+/give @s deathwhisper:lament_configuration
+/gamerule deathWhisperChainsRange 16
+/gamerule deathWhisperChainSpeed 10
+/gamerule deathWhisperChainFlightTicks 22
+/gamerule deathWhisperChainsSeconds 8
+/gamerule deathWhisperChainHuntsEnabled true
+/gamerule deathWhisperChainHuntDelay 90
+\`\`\`
+
+For accelerated solo testing, try \`/gamerule deathWhisperChainHuntDelay 15\` and stand near normal hostile mobs; Chains do not hit yourself.
+
+### The Artist / Birds of Torment
+
+The feather no longer releases auto-homing projectiles. Instead, right-click to **place** an ink crow along your look direction. Place up to three. **Sneak + right-click** to fire placed crows immediately, or click once more after all three are staged. Crows fly straight along the directions they were placed.
+- In their initial 8-block path, a crow deals damage on contact.
+- Beyond their direct flight path, it applies a **crow swarm** and reveals a target. A subsequent crow strike while the target is still swarmed deals damage.
+- A player can hold **SNEAK** to repel an active swarm (PvP must be enabled for swarms to affect other players). This is a particle-based effect with server-authoritative time and no permanent crow entities.
+
+\`\`\`mcfunction
+/give @s deathwhisper:ink_feather
+/gamerule deathWhisperCrowCount 3
+/gamerule deathWhisperCrowSwarmSeconds 9
+/gamerule deathWhisperCrowRepelTicks 100
+\`\`\`
+
+### Ghost Face / Night Shroud
+
+The shrouded mask gives temporary invisibility and lets you stalk one target at a time. Each target's stalk meter **remains saved in runtime memory across changing targets and shroud uses**, until marked. Stalking beside solid cover increases progress. Another player within ~32 blocks who deliberately **stares at you for 1.5 seconds** can reveal and cancel the invisibility. Once a victim is marked, the next damaging attack from the owner gets an Exposed-style damage bonus and **consumes the mark**.
+
+\`\`\`mcfunction
+/give @s deathwhisper:shrouded_mask
+/gamerule deathWhisperGhostMarkTicks 80
+/gamerule deathWhisperGhostMarkSeconds 60
+/gamerule deathWhisperGhostDamageBonus 200
+\`\`\`
+
+Remaining differences: the ordinary Minecraft invisibility effect does not fully hide all equipped armor/items and there is no client lean camera. In PvP-disabled worlds the mask still works on hostile mobs but not player attacks.
+
+### The Deathslinger / Redeemer
+
+\`deathwhisper:living_harpoon\` now fires a **travelling steel hook** with a visible particle trajectory. It only collides with **survival/adventure players**, never mobs, Pokémon or Death. It reels in a hooked player; terrain contact, broken line of sight, exceeded range or expiry breaks the chain. Victims can hold **SNEAK** to break free sooner. Dedicated opt-in remains necessary: \`/gamerule deathWhisperHarpoonPvp true\`.
+
+### The Blight / Blighted Corruption
+
+Retains chained, accelerating wall rebounds and missed-wall fatigue. A **Lethal Rush** is now possible from the second rush onward: contacting a valid target while dashing damages it and ends the sequence with fatigue. The first rush does not damage enemies. Contact damage is an approximation of DBD's Attack action; this release does not intercept a separate attack-button input while rushing.
+
+\`\`\`mcfunction
+/gamerule deathWhisperRushLethalDamage 6
+/gamerule deathWhisperRushAcceleration 18
+\`\`\`
+
+### Jason / Omnipresent Evil
+
+\`deathwhisper:slasher_relic\` now supports **sneak + right-click to throw scrap ammunition** (one iron nugget per cast), knocking a valid target back and applying a short immobilizing slow if the victim is pushed against a solid wall. Regular right-click grants stealth and private footprints, then the second activation performs the existing jump-scare lunge. This is **not** full Jason jump-scare vaulting or pallet destruction; protected blocks are never broken.
+
+### The Animatronic / Security Network
+
+The existing registered iron-door system still offers text-based status snapshots and optional same-dimension travel. Scans now use **10% camera battery**, travel costs **40%**, and energy regenerates over time. A real live camera render, shared-survivor battery pool and purpose-built security-room UI are not yet implemented. Teleportation remains **OFF by default** (via \`deathWhisperSecurityTravel false\`) until compatibility with Open Parties and Claims has been confirmed.
+
+### Re-test sequence
+
+Start with a backup and a controlled test world. Test the Cenobite with one hostile mob, then two PvP-consenting players; verify all three individual crouch-breaks and six-second puzzle solving. Test Artist with two consecutive crow flights, then Ghost Face with two players who can reveal each other. Confirm harpoon does not grab any mob and that its projectile can miss. Try the Blight first rush vs second rush to verify only the latter can damage. Confirm no Pokémon are affected with the new default protection gamerule.
+
+The version **compiles through GitHub Actions**, but all client animations and gameplay counterplay require real in-game verification. Never enable security travel or combat PvP in protected production claims without multiplayer testing.
