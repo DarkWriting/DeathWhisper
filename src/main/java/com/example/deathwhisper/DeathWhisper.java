@@ -129,6 +129,7 @@ public final class DeathWhisper {
         modBus.addListener(this::addCreativeItems);
         SOUNDS.register(modBus);
         modBus.addListener(this::registerAttributes);
+        modBus.addListener(CameraPackets::register);
         StalkingManager manager = new StalkingManager();
         NeoForge.EVENT_BUS.register(manager);
         NeoForge.EVENT_BUS.register(POWERS);
