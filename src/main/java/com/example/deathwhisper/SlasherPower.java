@@ -70,7 +70,7 @@ public final class SlasherPower implements SupernaturalAbility {
             Vec3 at=eye.lerp(target,i/16.0);
             level.sendParticles(ParticleTypes.CRIT,at.x,at.y,at.z,1,0,0,0,0);
         }
-        level.playSound(null,p.blockPosition(),SoundEvents.TRIDENT_THROW,SoundSource.PLAYERS,1f,.85f);
+        level.playSound(null,p.blockPosition(),SoundEvents.TRIDENT_THROW.value(),SoundSource.PLAYERS,1f,.85f);
         if(hit!=null){
             hit.hurt(p.damageSources().magic(),3f);
             hit.knockback(1.3,-p.getLookAngle().x,-p.getLookAngle().z);
