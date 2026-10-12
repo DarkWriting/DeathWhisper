@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -57,7 +57,7 @@ public final class CameraPackets {
     }
     private static void onView(View packet,IPayloadContext context){
         // Do not classload the client renderer on a dedicated server.
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT,()->()->ClientCamera.receive(packet));
+        if(FMLEnvironment.dist==Dist.CLIENT) ClientCamera.receive(packet);
     }
     private static void onControl(Control packet,IPayloadContext context){
         if(!(context.player() instanceof ServerPlayer player))return;
