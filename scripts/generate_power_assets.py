@@ -11,7 +11,7 @@ def write(name,pixels):
     png=b"\x89PNG\r\n\x1a\n"+part(b"IHDR",struct.pack(">IIBBBBB",w,h,8,6,0,0,0))
     png+=part(b"IDAT",zlib.compress(raw,9))+part(b"IEND",b"")
     (out/(name+".png")).write_bytes(png)
-for name in ("chain_puzzle_box","blight_serum","shrouded_mask","ink_feather","living_harpoon","slasher_relic","security_door_controller"):
+for name in ("chain_puzzle_box","lament_configuration","blight_serum","shrouded_mask","ink_feather","living_harpoon","slasher_relic","security_door_controller"):
     p=[[(0,0,0,0) for x in range(32)] for y in range(32)]
     def px(x,y,c):
         if 0<=x<32 and 0<=y<32:p[y][x]=c
@@ -33,6 +33,24 @@ for name in ("chain_puzzle_box","blight_serum","shrouded_mask","ink_feather","li
         for x in range(13,19):
             for y in range(13,19):px(x,y,(89,33,115,255))
         for x,y in ((15,14),(16,14),(15,17),(16,17)):px(x,y,(239,178,253,255))
+    elif name=="lament_configuration":
+        # A golden kinetic puzzle box; distinct from the caster's obsidian gateway device.
+        for y in range(5,27):
+            for x in range(5,27):
+                px(x,y,(200,162,75,255) if x in (5,26) or y in (5,26)
+                   else (101,60,51,255))
+        for i in range(8,25):
+            px(i,i,(245,216,113,255))
+            px(31-i,i,(245,216,113,255))
+        for y in range(8,24):
+            for x in range(14,18):
+                px(x,y,(161,117,53,255))
+        for x in range(11,21):
+            for y in range(13,19):
+                px(x,y,(219,182,82,255))
+        for x in range(14,18):
+            for y in range(14,18):
+                px(x,y,(42,31,51,255))
     elif name=="blight_serum":
         # Bright, eerie violet serum inside an amber vial with a silver stopper.
         for y in range(3,7):
