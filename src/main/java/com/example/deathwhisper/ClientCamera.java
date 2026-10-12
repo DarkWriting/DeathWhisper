@@ -50,9 +50,11 @@ public final class ClientCamera {
             return;
         }
         boolean replace=pawn==null || world!=mc.level || !mode.equals(view.mode());
+        boolean switchedDoor=!replace && view.mode().equals("security") && view.index()!=index;
         if(replace)stop(false);
         world=mc.level;
         mode=view.mode();index=view.index();fired=false;
+        if(switchedDoor){yaw=view.yaw();pitch=view.pitch();}
         if(pawn==null){
             // Server will never track this dummy: it only changes local rendering.
             pawn=new ArmorStand(EntityType.ARMOR_STAND,mc.level);
