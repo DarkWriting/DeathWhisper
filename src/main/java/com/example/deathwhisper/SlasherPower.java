@@ -12,6 +12,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -35,10 +37,57 @@ public final class SlasherPower implements SupernaturalAbility {
         long now=p.getServer().overworld().getGameTime();
         return state!=null && !state.lunged && now>=state.lastCast+12 && now<state.until;
     }
+    /** A single consumable iron-nugget "scrap" projectile, without breaking terrain. */
+    private boolean throwScrap(ServerPlayer p){
+        ServerLevel level=p.serverLevel();
+        boolean found=p.isCreative();
+        if(!found)for(var item:p.getInventory().items){
+            if(item.is(Items.IRON_NUGGET) && item.getCount()>0){
+                item.shrink(1);found=true;break;
+            }
+        }
+        if(!found){
+            p.displayClientMessage(Component.literal("Carry an iron nugget as improvised scrap ammunition."),true);
+            return false;
+        }
+        Vec3 eye=p.getEyePosition();
+        Vec3 end=eye.add(p.getLookAngle().scale(18));
+        var terrain=level.clip(new net.minecraft.world.level.ClipContext(eye,end,
+            net.minecraft.world.level.ClipContext.Block.COLLIDER,
+            net.minecraft.world.level.ClipContext.Fluid.NONE,p));
+        Vec3 finalPoint=terrain.getType()==net.minecraft.world.phys.HitResult.Type.MISS?
+            end:terrain.getLocation();
+        LivingEntity hit=null;double nearest=Double.POSITIVE_INFINITY;
+        for(LivingEntity other:level.getEntitiesOfClass(LivingEntity.class,
+            new AABB(eye,finalPoint).inflate(.4),entity->PowerFramework.canAffect(p,entity))){
+            var intersection=other.getBoundingBox().inflate(.13).clip(eye,finalPoint);
+            if(intersection.isEmpty())continue;
+            double d=eye.distanceToSqr(intersection.get());
+            if(d<nearest){nearest=d;hit=other;}
+        }
+        Vec3 target=hit==null?finalPoint:hit.getEyePosition();
+        for(int i=0;i<=16;i++){
+            Vec3 at=eye.lerp(target,i/16.0);
+            level.sendParticles(ParticleTypes.CRIT,at.x,at.y,at.z,1,0,0,0,0);
+        }
+        level.playSound(null,p.blockPosition(),SoundEvents.TRIDENT_THROW,SoundSource.PLAYERS,1f,.85f);
+        if(hit!=null){
+            hit.hurt(p.damageSources().magic(),3f);
+            hit.knockback(1.3,-p.getLookAngle().x,-p.getLookAngle().z);
+            net.minecraft.core.BlockPos behind=net.minecraft.core.BlockPos.containing(
+                hit.position().add(p.getLookAngle().scale(1.1)));
+            if(level.hasChunkAt(behind) && !level.getBlockState(behind).getCollisionShape(level,behind).isEmpty()){
+                hit.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,40,4,false,true,true));
+                p.displayClientMessage(Component.literal("Scrap impaled "+hit.getName().getString()+" against cover."),true);
+            }else p.displayClientMessage(Component.literal("Scrap struck "+hit.getName().getString()),true);
+        }else p.displayClientMessage(Component.literal("Scrap missed."),true);
+        return true;
+    }
     @Override public boolean activate(ServerPlayer p){
         long now=p.getServer().overworld().getGameTime();
         State state=active.get(p.getUUID());
         if(state!=null && !state.lunged && now<state.until && now>=state.lastCast+12){
+            if(p.isShiftKeyDown())return throwScrap(p);
             state.lunged=true;
             p.removeEffect(MobEffects.INVISIBILITY);
             double speed=Mth.clamp(p.level().getGameRules().getInt(WhisperRules.SLASHER_LUNGE_SPEED),70,220)/100.0;
@@ -51,12 +100,14 @@ public final class SlasherPower implements SupernaturalAbility {
             return true;
         }
         if(state!=null && now<state.until)return false;
+        // Crouch + use fires scrap instead of activating the stealth stance.
+        if(p.isShiftKeyDown())return throwScrap(p);
         int duration=Mth.clamp(p.level().getGameRules().getInt(WhisperRules.SLASHER_SECONDS),3,35);
         active.put(p.getUUID(),new State(now+duration*20L,now));
         p.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY,duration*20,0,false,false,true));
         p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED,duration*20,0,false,false,true));
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.ENDERMAN_AMBIENT,SoundSource.PLAYERS,1f,.7f);
-        p.displayClientMessage(Component.literal("Cloaked. Follow spectral tracks; right-click again to lunge."),true);
+        p.displayClientMessage(Component.literal("Omnipresent Evil: invisible; follow footprints. Use again to jump-scare dash, or sneak-use to throw scrap."),true);
         return true;
     }
     @Override public void serverTick(MinecraftServer server){
