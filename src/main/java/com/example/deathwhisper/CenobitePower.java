@@ -147,6 +147,12 @@ public final class CenobitePower implements SupernaturalAbility {
         return true;
     }
 
+    /** ESC/close cancels the unlaunched gateway and any still flying owned chain. */
+    public void cancelCamera(ServerPlayer player){
+        gateways.remove(player.getUUID());
+        cameraAim.remove(player.getUUID());
+        flying.removeIf(chain->chain.caster.equals(player.getUUID()));
+    }
     public boolean startSolving(ServerPlayer p){
         ServerLevel level=p.serverLevel();
         if(!level.getGameRules().getBoolean(WhisperRules.POWERS_ENABLED)
@@ -200,8 +206,12 @@ public final class CenobitePower implements SupernaturalAbility {
                 : owner.getLookAngle();
             Vec3 desired=look.normalize().scale(chain.velocity.length());
             // The caster can steer by looking in another direction. Not a remote camera.
-            chain.velocity=chain.velocity.scale(.72).add(desired.scale(.28));
-            Vec3 end=chain.point.add(chain.velocity.scale(2));
+            // Send camera aim each client tick and give it enough flight time to steer.
+            // Preserve speed when turning sharply instead of slowing almost to a halt.
+            Vec3 guided=chain.velocity.scale(.60).add(desired.scale(.40));
+            if(guided.lengthSqr()>.001)
+                chain.velocity=guided.normalize().scale(desired.length());
+            Vec3 end=chain.point.add(chain.velocity);
             if(!level.hasChunkAt(BlockPos.containing(end))
                 || level.clip(new ClipContext(chain.point,end,ClipContext.Block.COLLIDER,
                     ClipContext.Fluid.NONE,owner)).getType()!=HitResult.Type.MISS){
@@ -224,7 +234,7 @@ public final class CenobitePower implements SupernaturalAbility {
                 level.sendParticles(ParticleTypes.CRIT,point.x,point.y,point.z,1,0,0,0,0);
             }
             chain.point=end;
-            chain.steps+=2;
+            chain.steps++;
             CameraPackets.follow(owner,end);
             if(hit!=null){
                 bound.put(hit.getUUID(),new Bound(owner.getUUID(),hit.getUUID(),level.dimension(),
